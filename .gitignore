@@ -1,10 +1,37 @@
-node_modules
-dist
-.output
-.tanstack
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+
+# Production Builds & Artifacts
+build/
+dist/
+.output/
+.dex/
+.cache/
+
+# Environment variables
 .env
-.env.*
-!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Elixir / Phoenix
+_build/
+deps/
+*.beam
+.fetch
+.elixir_ls/
+
+# System / IDE
 .DS_Store
-*.log
-.browser-checks
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
