@@ -42,7 +42,7 @@ export default function LandingPage() {
 					<div className="flex items-center gap-4">
 						<a
 							href="#get-started"
-							className="px-4 py-1.5 text-xs font-semibold rounded bg-white text-black hover:bg-neutral-200 transition-colors"
+							className="px-5 py-2 text-xs font-semibold rounded-full bg-white text-black hover:bg-neutral-200 transition-colors"
 						>
 							Open App
 						</a>
@@ -53,7 +53,7 @@ export default function LandingPage() {
 			{/* Section 1: Hero — Unified Communication */}
 			<section className="min-h-screen flex flex-col justify-center px-6 pt-24 pb-16 border-b border-[#1f1f1f] relative">
 				<div className="max-w-5xl mx-auto w-full text-center space-y-8">
-					<div className="inline-block px-3 py-1 border border-[#2e2e2e] text-neutral-400 text-xs uppercase tracking-widest rounded-full">
+					<div className="inline-block px-4 py-1.5 border border-[#2e2e2e] text-neutral-400 text-xs uppercase tracking-widest rounded-full">
 						The Next Generation Messaging Platform
 					</div>
 
@@ -68,7 +68,7 @@ export default function LandingPage() {
 					<div className="flex flex-wrap items-center justify-center gap-4 pt-4">
 						<a
 							href="#dual-modes"
-							className="px-8 py-3.5 rounded bg-white text-black font-semibold text-sm hover:bg-neutral-200 transition-colors"
+							className="px-8 py-3.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-neutral-200 transition-colors"
 						>
 							Explore the Concept
 						</a>
@@ -76,7 +76,7 @@ export default function LandingPage() {
 							href="https://github.com/patrickaigbogun/concord"
 							target="_blank"
 							rel="noreferrer"
-							className="px-8 py-3.5 rounded border border-[#2e2e2e] text-white font-semibold text-sm hover:bg-neutral-900 transition-colors"
+							className="px-8 py-3.5 rounded-full border border-[#2e2e2e] text-white font-semibold text-sm hover:bg-neutral-900 transition-colors"
 						>
 							Source Code
 						</a>
@@ -98,7 +98,7 @@ export default function LandingPage() {
 					</p>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
 							<div>
 								<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-2">Mode A</div>
 								<h3 className="text-2xl font-bold text-white mb-4">Chat Stream</h3>
@@ -106,14 +106,14 @@ export default function LandingPage() {
 									Low-friction, realtime conversational flow for everyday discussion, instant reactions, and rapid back-and-forth exchange.
 								</p>
 							</div>
-							<div className="p-4 rounded border border-[#1f1f1f] bg-black text-xs font-mono text-neutral-300 space-y-2">
+							<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono text-neutral-300 space-y-2">
 								<div className="text-neutral-500">// Realtime continuous message</div>
 								<div><span className="text-white font-bold">Elena:</span> Has everyone reviewed the latest essay draft?</div>
 								<div><span className="text-white font-bold">Marcus:</span> Reading section 2 now. The distinction on curation is sharp.</div>
 							</div>
 						</div>
 
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
 							<div>
 								<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-2">Mode B</div>
 								<h3 className="text-2xl font-bold text-white mb-4">Published Posts</h3>
@@ -121,7 +121,7 @@ export default function LandingPage() {
 									Deliberately published writings, essays, proposals, and updates that stand apart from the chat stream with their own structured discussion trees.
 								</p>
 							</div>
-							<div className="p-4 rounded border border-[#1f1f1f] bg-black text-xs font-mono text-neutral-300 space-y-2">
+							<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono text-neutral-300 space-y-2">
 								<div className="text-neutral-500">// Deliberate publication</div>
 								<div className="text-white font-bold">Title: On the Independence of Communication Units</div>
 								<div className="text-neutral-400 line-clamp-2">"A Space is not a mere channel within a server; it is a sovereign context..."</div>
@@ -146,7 +146,7 @@ export default function LandingPage() {
 					</p>
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Core Unit</div>
 							<h3 className="text-xl font-bold text-white mb-3">The Space</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
@@ -154,7 +154,7 @@ export default function LandingPage() {
 							</p>
 						</div>
 
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Grouping</div>
 							<h3 className="text-xl font-bold text-white mb-3">The Realm</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
@@ -162,7 +162,7 @@ export default function LandingPage() {
 							</p>
 						</div>
 
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Governance</div>
 							<h3 className="text-xl font-bold text-white mb-3">Explicit Agreement</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
@@ -188,13 +188,13 @@ export default function LandingPage() {
 
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 						<div className="space-y-6">
-							<div className="p-6 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+							<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 								<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-1">Global Identity</div>
 								<div className="text-lg font-bold text-white">Alex Mercer</div>
 								<div className="text-xs font-mono text-neutral-400 mt-1">@alexmercer • Universal account identifier</div>
 							</div>
 
-							<div className="p-6 rounded-xl border border-white/20 bg-[#0a0a0a] space-y-4">
+							<div className="p-7 rounded-3xl border border-white/20 bg-[#0a0a0a] space-y-4">
 								<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono">
 									Current Space Persona ({activePersona === 'reading' ? 'Philosophy Circle' : 'Design Studio'})
 								</div>
@@ -210,7 +210,7 @@ export default function LandingPage() {
 									<button
 										type="button"
 										onClick={() => setActivePersona((p) => (p === 'reading' ? 'studio' : 'reading'))}
-										className="px-3 py-1.5 text-xs font-semibold rounded bg-white text-black hover:bg-neutral-200 transition-colors"
+										className="px-4 py-2 text-xs font-semibold rounded-full bg-white text-black hover:bg-neutral-200 transition-colors"
 									>
 										Switch Context
 									</button>
@@ -218,7 +218,7 @@ export default function LandingPage() {
 							</div>
 						</div>
 
-						<div className="p-8 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] space-y-4">
+						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] space-y-4">
 							<h3 className="text-xl font-bold text-white">Why Contextual Tags Matter</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
 								A user might be a formal contributor in a professional working group, a student in an academic space, or an anonymous participant in a feedback session.
@@ -245,7 +245,7 @@ export default function LandingPage() {
 					</p>
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-						<div className="p-6 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 1</div>
 							<h3 className="text-lg font-bold text-white mb-2">Space Only</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
@@ -253,7 +253,7 @@ export default function LandingPage() {
 							</p>
 						</div>
 
-						<div className="p-6 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 2</div>
 							<h3 className="text-lg font-bold text-white mb-2">Realm Only</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
@@ -261,7 +261,7 @@ export default function LandingPage() {
 							</p>
 						</div>
 
-						<div className="p-6 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a]">
+						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 3</div>
 							<h3 className="text-lg font-bold text-white mb-2">Universal</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
@@ -270,7 +270,7 @@ export default function LandingPage() {
 						</div>
 					</div>
 
-					<div className="p-6 rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] flex items-center justify-between flex-wrap gap-4">
+					<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex items-center justify-between flex-wrap gap-4">
 						<div>
 							<div className="text-sm font-bold text-white">Interactive Echo Verification</div>
 							<div className="text-xs text-neutral-400 mt-0.5">Test echoing a post into an external space</div>
@@ -278,7 +278,7 @@ export default function LandingPage() {
 						<button
 							type="button"
 							onClick={toggleEcho}
-							className={`px-4 py-2 rounded text-xs font-semibold font-mono transition-colors ${
+							className={`px-5 py-2.5 rounded-full text-xs font-semibold font-mono transition-colors ${
 								echoed ? 'bg-white text-black' : 'border border-[#2e2e2e] text-white hover:bg-neutral-900'
 							}`}
 						>
@@ -301,14 +301,14 @@ export default function LandingPage() {
 						Spaces expose different views through clean top-level tabs. Never scroll through thousands of lines of chat history to locate an uploaded document or image again.
 					</p>
 
-					<div className="rounded-xl border border-[#1f1f1f] bg-[#0a0a0a] overflow-hidden">
-						<div className="p-4 border-b border-[#1f1f1f] bg-black flex items-center justify-between flex-wrap gap-3">
+					<div className="rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] overflow-hidden">
+						<div className="p-5 border-b border-[#1f1f1f] bg-black flex items-center justify-between flex-wrap gap-3">
 							<div className="font-mono text-xs text-neutral-300">Space: #manuscripts</div>
 							<div className="flex items-center gap-2">
 								<button
 									type="button"
 									onClick={() => setActiveTab('conversation')}
-									className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
+									className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${
 										activeTab === 'conversation' ? 'bg-white text-black' : 'text-neutral-400 hover:text-white'
 									}`}
 								>
@@ -317,7 +317,7 @@ export default function LandingPage() {
 								<button
 									type="button"
 									onClick={() => setActiveTab('posts')}
-									className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
+									className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${
 										activeTab === 'posts' ? 'bg-white text-black' : 'text-neutral-400 hover:text-white'
 									}`}
 								>
@@ -326,7 +326,7 @@ export default function LandingPage() {
 								<button
 									type="button"
 									onClick={() => setActiveTab('media')}
-									className={`px-3 py-1 rounded text-xs font-mono transition-colors ${
+									className={`px-4 py-1.5 rounded-full text-xs font-mono transition-colors ${
 										activeTab === 'media' ? 'bg-white text-black' : 'text-neutral-400 hover:text-white'
 									}`}
 								>
@@ -344,7 +344,7 @@ export default function LandingPage() {
 							)}
 
 							{activeTab === 'posts' && (
-								<div className="p-4 rounded border border-[#1f1f1f] bg-black">
+								<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black">
 									<div className="text-sm font-bold text-white mb-1">Editorial Guidelines v2.4</div>
 									<div className="text-xs text-neutral-400">Published by Elena • 24 comments • Permanent document</div>
 								</div>
@@ -352,15 +352,15 @@ export default function LandingPage() {
 
 							{activeTab === 'media' && (
 								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-									<div className="p-4 rounded border border-[#1f1f1f] bg-black text-xs font-mono">
+									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
 										<div className="text-white font-bold mb-1">manuscript_v2.pdf</div>
 										<div className="text-neutral-500">1.8 MB • Document</div>
 									</div>
-									<div className="p-4 rounded border border-[#1f1f1f] bg-black text-xs font-mono">
+									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
 										<div className="text-white font-bold mb-1">cover_typeset.png</div>
 										<div className="text-neutral-500">3.4 MB • Image</div>
 									</div>
-									<div className="p-4 rounded border border-[#1f1f1f] bg-black text-xs font-mono">
+									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
 										<div className="text-white font-bold mb-1">audio_reading.wav</div>
 										<div className="text-neutral-500">14.2 MB • Audio</div>
 									</div>
@@ -391,7 +391,7 @@ export default function LandingPage() {
 							href="http://localhost:4000/api/swagger"
 							target="_blank"
 							rel="noreferrer"
-							className="px-8 py-3.5 rounded bg-white text-black font-semibold text-sm hover:bg-neutral-200 transition-colors"
+							className="px-8 py-3.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-neutral-200 transition-colors"
 						>
 							API Specification
 						</a>
@@ -399,7 +399,7 @@ export default function LandingPage() {
 							href="https://github.com/patrickaigbogun/concord"
 							target="_blank"
 							rel="noreferrer"
-							className="px-8 py-3.5 rounded border border-[#2e2e2e] text-white font-semibold text-sm hover:bg-neutral-900 transition-colors"
+							className="px-8 py-3.5 rounded-full border border-[#2e2e2e] text-white font-semibold text-sm hover:bg-neutral-900 transition-colors"
 						>
 							GitHub Repository
 						</a>
