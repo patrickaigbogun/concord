@@ -1,20 +1,16 @@
 @import "tailwindcss";
 
 :root {
-	--bg: #090a10;
-	--bg-card: #11131f;
-	--bg-card-hover: #171a2b;
-	--border: #212538;
-	--border-light: #2e3550;
-	--text: #f8fafc;
-	--text-muted: #94a3b8;
-	--text-subtle: #64748b;
-	--primary: #7c3aed;
-	--primary-hover: #6d28d9;
-	--accent-pink: #ec4899;
-	--accent-cyan: #06b6d4;
-	--accent-amber: #f59e0b;
-	--accent-emerald: #10b981;
+	--bg: #000000;
+	--bg-card: #0a0a0a;
+	--bg-card-hover: #121212;
+	--border: #1f1f1f;
+	--border-light: #2e2e2e;
+	--text: #ffffff;
+	--text-muted: #888888;
+	--text-subtle: #555555;
+	--primary: #ffffff;
+	--primary-hover: #e5e5e5;
 }
 
 html,
@@ -27,33 +23,11 @@ body {
 	margin: 0;
 	background: var(--bg);
 	color: var(--text);
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 	-webkit-font-smoothing: antialiased;
 }
 
-/* Vibrant Glows */
-.glow-hero {
-	background: radial-gradient(circle at 50% 10%, rgba(124, 58, 237, 0.28) 0%, rgba(236, 72, 153, 0.15) 35%, rgba(9, 10, 16, 0) 70%);
-}
-
-.glow-purple {
-	box-shadow: 0 0 60px -15px rgba(124, 58, 237, 0.35);
-}
-
-.glow-pink {
-	box-shadow: 0 0 60px -15px rgba(236, 72, 153, 0.35);
-}
-
-.glow-cyan {
-	box-shadow: 0 0 60px -15px rgba(6, 182, 212, 0.35);
-}
-
-.mesh-card {
-	background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
-	backdrop-filter: blur(20px);
-}
-
-.grid-dots {
-	background-size: 24px 24px;
-	background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+/* Crisp minimal focus styling */
+.border-subtle {
+	border-color: var(--border);
 }
