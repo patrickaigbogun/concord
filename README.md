@@ -11,7 +11,7 @@ Concord follows a client-agnostic, contract-first design. The core backend serve
 ```
 concord/
 ├── clients/
-│   ├── web/           # Dex SPA (React 19, Tailwind CSS v4, @dex/pie)
+│   ├── www/           # Dex SPA (React 19, Tailwind CSS v4, @dex/pie)
 │   ├── mobile/        # Mobile client
 │   └── desktop/       # Desktop client
 ├── server/
@@ -29,7 +29,7 @@ concord/
   - [OpenApiSpex](https://github.com/open-api-spex/open_api_spex) for contract-first schema & OpenAPI specs
   - Phoenix Channels / WebSockets for real-time messaging and events
 
-- **Web Client (`clients/web`)**:
+- **Web Client (`clients/www`)**:
   - [Dex](https://github.com/dex) Single-Page Application framework
   - [React 19](https://react.dev/) & [Tailwind CSS v4](https://tailwindcss.com/)
   - [`@dex/pie`](https://github.com/dex) type-safe API client generator & RPC layer
@@ -69,11 +69,11 @@ concord/
 
 ---
 
-### Web Client Setup (`clients/web`)
+### Web Client Setup (`clients/www`)
 
 1. Install dependencies:
    ```bash
-   cd clients/web
+   cd clients/www
    bun install
    ```
 
