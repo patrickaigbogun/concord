@@ -28,7 +28,6 @@ export default function LandingPage() {
 				<div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 					<div className="flex items-center gap-3">
 						<span className="font-bold tracking-tight text-lg text-white">Concord</span>
-						<span className="text-xs uppercase tracking-widest text-neutral-500 font-mono">v1.0</span>
 					</div>
 
 					<nav className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest text-neutral-400">
