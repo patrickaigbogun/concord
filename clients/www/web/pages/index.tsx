@@ -27,10 +27,10 @@ export default function LandingPage() {
 			<header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-[#1f1f1f]">
 				<div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<span className="font-bold tracking-tight text-lg text-white">Concord</span>
+						<span className="font-bold tracking-tight text-lg text-white font-heading">Concord</span>
 					</div>
 
-					<nav className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest text-neutral-400">
+					<nav className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest text-neutral-400 font-mono">
 						<a href="#dual-modes" className="hover:text-white transition-colors">Chat & Posts</a>
 						<a href="#spaces-realms" className="hover:text-white transition-colors">Spaces & Realms</a>
 						<a href="#identity" className="hover:text-white transition-colors">Identity</a>
@@ -50,13 +50,13 @@ export default function LandingPage() {
 			</header>
 
 			{/* Section 1: Hero — Unified Communication */}
-			<section className="min-h-screen flex flex-col justify-center px-6 pt-24 pb-16 border-b border-[#1f1f1f] relative">
+			<section className="min-h-screen flex flex-col justify-center px-6 pt-24 pb-16 relative">
 				<div className="max-w-5xl mx-auto w-full text-center space-y-8">
-					<div className="inline-block px-4 py-1.5 border border-[#2e2e2e] text-neutral-400 text-xs uppercase tracking-widest rounded-full">
+					<div className="inline-block px-4 py-1.5 border border-[#2e2e2e] text-neutral-400 text-xs uppercase tracking-widest rounded-full font-mono">
 						The Next Generation Messaging Platform
 					</div>
 
-					<h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-white leading-none">
+					<h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-white leading-none font-heading">
 						Communication for people who think in words.
 					</h1>
 
@@ -84,12 +84,12 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 2: Dual Modes — Chat vs. Posts */}
-			<section id="dual-modes" className="min-h-screen flex flex-col justify-center px-6 py-20 border-b border-[#1f1f1f]">
+			<section id="dual-modes" className="min-h-screen flex flex-col justify-center px-6 py-20">
 				<div className="max-w-6xl mx-auto w-full">
 					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-3">
 						01 — Dual Messaging Architecture
 					</div>
-					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6 font-heading">
 						Fast continuous chat. Deliberate published posts.
 					</h2>
 					<p className="text-lg text-neutral-400 max-w-3xl mb-12 leading-relaxed">
@@ -100,7 +100,7 @@ export default function LandingPage() {
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
 							<div>
 								<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-2">Mode A</div>
-								<h3 className="text-2xl font-bold text-white mb-4">Chat Stream</h3>
+								<h3 className="text-2xl font-bold text-white mb-4 font-heading">Chat Stream</h3>
 								<p className="text-sm text-neutral-400 leading-relaxed mb-6">
 									Low-friction, realtime conversational flow for everyday discussion, instant reactions, and rapid back-and-forth exchange.
 								</p>
@@ -115,7 +115,7 @@ export default function LandingPage() {
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex flex-col justify-between">
 							<div>
 								<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-2">Mode B</div>
-								<h3 className="text-2xl font-bold text-white mb-4">Published Posts</h3>
+								<h3 className="text-2xl font-bold text-white mb-4 font-heading">Published Posts</h3>
 								<p className="text-sm text-neutral-400 leading-relaxed mb-6">
 									Deliberately published writings, essays, proposals, and updates that stand apart from the chat stream with their own structured discussion trees.
 								</p>
@@ -132,12 +132,12 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 3: Spaces & Realms — Separation of Authority */}
-			<section id="spaces-realms" className="min-h-screen flex flex-col justify-center px-6 py-20 border-b border-[#1f1f1f]">
+			<section id="spaces-realms" className="min-h-screen flex flex-col justify-center px-6 py-20">
 				<div className="max-w-6xl mx-auto w-full">
 					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-3">
 						02 — Organizational Model
 					</div>
-					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6 font-heading">
 						Sovereign Spaces. Federated Realms.
 					</h2>
 					<p className="text-lg text-neutral-400 max-w-3xl mb-12 leading-relaxed">
@@ -147,7 +147,7 @@ export default function LandingPage() {
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Core Unit</div>
-							<h3 className="text-xl font-bold text-white mb-3">The Space</h3>
+							<h3 className="text-xl font-bold text-white mb-3 font-heading">The Space</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
 								The fundamental communication unit. A Space can represent two people, a focused team, or an open group. It retains its own curators, settings, and content.
 							</p>
@@ -155,7 +155,7 @@ export default function LandingPage() {
 
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Grouping</div>
-							<h3 className="text-xl font-bold text-white mb-3">The Realm</h3>
+							<h3 className="text-xl font-bold text-white mb-3 font-heading">The Realm</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
 								A higher-level organizational structure that brings related Spaces together. Membership in a Realm does not automatically grant access to internal Spaces.
 							</p>
@@ -163,7 +163,7 @@ export default function LandingPage() {
 
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="text-xs uppercase tracking-widest text-neutral-400 font-mono mb-3">Governance</div>
-							<h3 className="text-xl font-bold text-white mb-3">Explicit Agreement</h3>
+							<h3 className="text-xl font-bold text-white mb-3 font-heading">Explicit Agreement</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
 								When a Space joins a Realm, rules are accepted via an explicit checklist. Realm curators do not automatically become curators of the Space.
 							</p>
@@ -173,12 +173,12 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 4: Contextual Identity — Persona Tags */}
-			<section id="identity" className="min-h-screen flex flex-col justify-center px-6 py-20 border-b border-[#1f1f1f]">
+			<section id="identity" className="min-h-screen flex flex-col justify-center px-6 py-20">
 				<div className="max-w-6xl mx-auto w-full">
 					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-3">
 						03 — Contextual Identity
 					</div>
-					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6 font-heading">
 						One global account. Contextual personas.
 					</h2>
 					<p className="text-lg text-neutral-400 max-w-3xl mb-12 leading-relaxed">
@@ -189,7 +189,7 @@ export default function LandingPage() {
 						<div className="space-y-6">
 							<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 								<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-1">Global Identity</div>
-								<div className="text-lg font-bold text-white">Alex Mercer</div>
+								<div className="text-lg font-bold text-white font-heading">Alex Mercer</div>
 								<div className="text-xs font-mono text-neutral-400 mt-1">@alexmercer • Universal account identifier</div>
 							</div>
 
@@ -199,7 +199,7 @@ export default function LandingPage() {
 								</div>
 								<div className="flex items-center justify-between">
 									<div>
-										<div className="text-base font-bold text-white">
+										<div className="text-base font-bold text-white font-heading">
 											{activePersona === 'reading' ? 'Alex (Reader)' : 'Alex — Type Lead'}
 										</div>
 										<div className="text-xs font-mono text-neutral-400 mt-0.5">
@@ -218,7 +218,7 @@ export default function LandingPage() {
 						</div>
 
 						<div className="p-8 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] space-y-4">
-							<h3 className="text-xl font-bold text-white">Why Contextual Tags Matter</h3>
+							<h3 className="text-xl font-bold text-white font-heading">Why Contextual Tags Matter</h3>
 							<p className="text-sm text-neutral-400 leading-relaxed">
 								A user might be a formal contributor in a professional working group, a student in an academic space, or an anonymous participant in a feedback session.
 							</p>
@@ -231,12 +231,12 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 5: The Echo System — Controlled Sharing */}
-			<section id="echo" className="min-h-screen flex flex-col justify-center px-6 py-20 border-b border-[#1f1f1f]">
+			<section id="echo" className="min-h-screen flex flex-col justify-center px-6 py-20">
 				<div className="max-w-6xl mx-auto w-full">
 					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-3">
 						04 — Content Distribution
 					</div>
-					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6 font-heading">
 						The Echo System. Sharing with provenance.
 					</h2>
 					<p className="text-lg text-neutral-400 max-w-3xl mb-12 leading-relaxed">
@@ -246,7 +246,7 @@ export default function LandingPage() {
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 1</div>
-							<h3 className="text-lg font-bold text-white mb-2">Space Only</h3>
+							<h3 className="text-lg font-bold text-white mb-2 font-heading">Space Only</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
 								The post cannot leave the originating Space under any circumstance. Strict containment for private groups.
 							</p>
@@ -254,7 +254,7 @@ export default function LandingPage() {
 
 						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 2</div>
-							<h3 className="text-lg font-bold text-white mb-2">Realm Only</h3>
+							<h3 className="text-lg font-bold text-white mb-2 font-heading">Realm Only</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
 								The post can only be echoed into other Spaces that belong to the exact same parent Realm.
 							</p>
@@ -262,7 +262,7 @@ export default function LandingPage() {
 
 						<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a]">
 							<div className="font-mono text-xs text-neutral-400 uppercase tracking-wider mb-2">Policy 3</div>
-							<h3 className="text-lg font-bold text-white mb-2">Universal</h3>
+							<h3 className="text-lg font-bold text-white mb-2 font-heading">Universal</h3>
 							<p className="text-xs text-neutral-400 leading-relaxed">
 								The post can be echoed across any Space or Realm where the sharing member has post permissions.
 							</p>
@@ -271,7 +271,7 @@ export default function LandingPage() {
 
 					<div className="p-7 rounded-3xl border border-[#1f1f1f] bg-[#0a0a0a] flex items-center justify-between flex-wrap gap-4">
 						<div>
-							<div className="text-sm font-bold text-white">Interactive Echo Verification</div>
+							<div className="text-sm font-bold text-white font-heading">Interactive Echo Verification</div>
 							<div className="text-xs text-neutral-400 mt-0.5">Test echoing a post into an external space</div>
 						</div>
 						<button
@@ -288,12 +288,12 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 6: Multi-View Spaces — Dedicated Media & Files */}
-			<section id="views" className="min-h-screen flex flex-col justify-center px-6 py-20 border-b border-[#1f1f1f]">
+			<section id="views" className="min-h-screen flex flex-col justify-center px-6 py-20">
 				<div className="max-w-6xl mx-auto w-full">
 					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono mb-3">
 						05 — Space Views
 					</div>
-					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6">
+					<h2 className="text-4xl sm:text-6xl font-bold tracking-tight text-white mb-6 font-heading">
 						Dedicated views. Zero lost content.
 					</h2>
 					<p className="text-lg text-neutral-400 max-w-3xl mb-12 leading-relaxed">
@@ -344,7 +344,7 @@ export default function LandingPage() {
 
 							{activeTab === 'posts' && (
 								<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black">
-									<div className="text-sm font-bold text-white mb-1">Editorial Guidelines v2.4</div>
+									<div className="text-sm font-bold text-white mb-1 font-heading">Editorial Guidelines v2.4</div>
 									<div className="text-xs text-neutral-400">Published by Elena • 24 comments • Permanent document</div>
 								</div>
 							)}
@@ -352,15 +352,15 @@ export default function LandingPage() {
 							{activeTab === 'media' && (
 								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
-										<div className="text-white font-bold mb-1">manuscript_v2.pdf</div>
+										<div className="text-white font-bold mb-1 font-heading">manuscript_v2.pdf</div>
 										<div className="text-neutral-500">1.8 MB • Document</div>
 									</div>
 									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
-										<div className="text-white font-bold mb-1">cover_typeset.png</div>
+										<div className="text-white font-bold mb-1 font-heading">cover_typeset.png</div>
 										<div className="text-neutral-500">3.4 MB • Image</div>
 									</div>
 									<div className="p-5 rounded-2xl border border-[#1f1f1f] bg-black text-xs font-mono">
-										<div className="text-white font-bold mb-1">audio_reading.wav</div>
+										<div className="text-white font-bold mb-1 font-heading">audio_reading.wav</div>
 										<div className="text-neutral-500">14.2 MB • Audio</div>
 									</div>
 								</div>
@@ -370,18 +370,22 @@ export default function LandingPage() {
 				</div>
 			</section>
 
-			{/* Section 7: Get Started / Final Section */}
-			<section id="get-started" className="min-h-screen flex flex-col justify-center px-6 py-20 text-center">
-				<div className="max-w-4xl mx-auto w-full space-y-8">
-					<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono">
-						Concord Communication
+			{/* Section 7: Fullscreen Closing & Footer */}
+			<footer id="get-started" className="min-h-screen flex flex-col justify-between px-6 py-16 text-center max-w-7xl mx-auto w-full">
+				<div className="pt-8 text-xs uppercase tracking-widest text-neutral-500 font-mono">
+					Concord Platform — 2026
+				</div>
+
+				<div className="max-w-4xl mx-auto w-full space-y-8 my-auto">
+					<div className="inline-block px-4 py-1.5 border border-[#2e2e2e] text-neutral-400 text-xs uppercase tracking-widest rounded-full font-mono">
+						Start Communicating
 					</div>
 
-					<h2 className="text-5xl sm:text-7xl font-bold tracking-tight text-white leading-tight">
-						Ready for a better way to communicate?
+					<h2 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight text-white leading-tight font-heading">
+						Ready for a better way to talk?
 					</h2>
 
-					<p className="text-lg text-neutral-400 max-w-xl mx-auto leading-relaxed">
+					<p className="text-lg sm:text-xl text-neutral-400 max-w-xl mx-auto leading-relaxed">
 						Experience messaging designed around writing, discussion, and sovereign organization.
 					</p>
 
@@ -404,12 +408,9 @@ export default function LandingPage() {
 						</a>
 					</div>
 				</div>
-			</section>
 
-			{/* Footer */}
-			<footer className="border-t border-[#1f1f1f] bg-black py-10 px-6">
-				<div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500 font-mono">
-					<div>CONCORD PLATFORM — 2026</div>
+				<div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500 font-mono pt-8 border-t border-[#1f1f1f]">
+					<div>CONCORD PLATFORM — ALL RIGHTS RESERVED</div>
 					<div className="flex items-center gap-6">
 						<a href="#dual-modes" className="hover:text-white transition-colors">Chat & Posts</a>
 						<a href="#spaces-realms" className="hover:text-white transition-colors">Spaces & Realms</a>
