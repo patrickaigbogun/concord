@@ -370,9 +370,9 @@ export default function LandingPage() {
 				</div>
 			</section>
 
-			{/* Section 7: Fullscreen Closing & Footer */}
-			<footer id="get-started" className="min-h-screen flex flex-col justify-between px-6 py-16 text-center max-w-7xl mx-auto w-full">
-				<div className="pt-8 text-xs uppercase tracking-widest text-neutral-500 font-mono">
+			{/* Section 7: Fullscreen Footer (Zero Top Borders) */}
+			<footer id="get-started" className="min-h-screen h-screen w-full flex flex-col justify-between px-6 py-16 text-center bg-black">
+				<div className="text-xs uppercase tracking-widest text-neutral-500 font-mono">
 					Concord Platform — 2026
 				</div>
 
@@ -409,7 +409,7 @@ export default function LandingPage() {
 					</div>
 				</div>
 
-				<div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500 font-mono pt-8 border-t border-[#1f1f1f]">
+				<div className="max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500 font-mono">
 					<div>CONCORD PLATFORM — ALL RIGHTS RESERVED</div>
 					<div className="flex items-center gap-6">
 						<a href="#dual-modes" className="hover:text-white transition-colors">Chat & Posts</a>
