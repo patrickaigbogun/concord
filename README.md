@@ -91,4 +91,4 @@ concord/
 
 ## 📄 License
 
-Proprietary. All rights reserved.
+none.
