@@ -1,5 +1,6 @@
 node_modules/
-web/public/assets/
+web/public/assets/client.js
+web/public/assets/styles.css
 core/router/.generated/
 build/
 .dex/

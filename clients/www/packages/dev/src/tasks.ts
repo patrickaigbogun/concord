@@ -14,8 +14,14 @@ export type DexTaskOptions = {
 export async function dexPrepareBuild({ rootDir }: DexTaskOptions) {
 	const buildDir = path.join(rootDir, 'build')
 	await rm(buildDir, { recursive: true, force: true })
+	await mkdir(buildDir, { recursive: true })
+	const publicDir = path.join(rootDir, 'web/public')
+	try {
+		await fsCp(publicDir, buildDir, { recursive: true })
+	} catch (e) {
+		console.warn('dexPrepareBuild: failed to copy web/public', e)
+	}
 	await mkdir(path.join(buildDir, 'assets'), { recursive: true })
-	await copyFile(path.join(rootDir, 'web/public/index.html'), path.join(buildDir, 'index.html'))
 }
 
 export async function dexBuildClient({ rootDir, defineArgs = [] }: DexTaskOptions) {

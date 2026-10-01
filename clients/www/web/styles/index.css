@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -12,8 +11,8 @@
 	--text-subtle: #555555;
 	--primary: #ffffff;
 	--primary-hover: #e5e5e5;
-	--font-body: 'Figtree', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	--font-heading: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	--font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 html,
@@ -30,15 +29,313 @@ body {
 	-webkit-font-smoothing: antialiased;
 }
 
-/* Typography scoping: Figtree for all content/body, system-sans for headings and brand headers */
-h1, h2, h3, h4, h5, h6, .font-heading {
-	font-family: var(--font-heading);
+
+/* 3D Perspective & Cinematic Keyframe Animation */
+@keyframes cinematicReveal {
+	0% {
+		transform: perspective(1200px) translateY(80px) rotateX(24deg) rotateY(-18deg) rotateZ(3deg) scale(0.82);
+		opacity: 0;
+	}
+	20% {
+		opacity: 1;
+	}
+	60% {
+		transform: perspective(1200px) translateY(20px) rotateX(10deg) rotateY(-6deg) rotateZ(1deg) scale(0.95);
+	}
+	100% {
+		transform: perspective(1200px) translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+		opacity: 1;
+	}
 }
 
-p, span, a, button, input, label, li, blockquote, div {
-	font-family: var(--font-body);
+.animate-cinematic-reveal {
+	animation: cinematicReveal 3.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	transform-style: preserve-3d;
+	will-change: transform, opacity;
 }
 
-.font-mono {
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+/* Lullaby Falling Mascot Heads Animations */
+@keyframes mascotFallTrack {
+	0% {
+		top: -6%;
+	}
+	100% {
+		top: 104%;
+	}
 }
+
+.mascot-fall-track {
+	animation-name: mascotFallTrack;
+	animation-timing-function: linear;
+	animation-iteration-count: infinite;
+	will-change: top;
+}
+
+@keyframes mascotSwayMotion {
+	0% {
+		transform: translateX(-16px) rotate(-6deg);
+	}
+	50% {
+		transform: translateX(16px) rotate(6deg);
+	}
+	100% {
+		transform: translateX(-16px) rotate(-6deg);
+	}
+}
+
+.mascot-sway-motion {
+	animation-name: mascotSwayMotion;
+	animation-timing-function: ease-in-out;
+	animation-iteration-count: infinite;
+	will-change: transform;
+}
+
+/* Subtle facial breathing / mouth pulse animation */
+@keyframes mascotMouthPulse {
+	0%, 100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.06, 0.94);
+	}
+}
+
+.mascot-mouth-pulse {
+	animation-name: mascotMouthPulse;
+	animation-timing-function: ease-in-out;
+	animation-iteration-count: infinite;
+}
+
+/* Natural eye blinking (open ~94% of the time, blinks shut for ~160ms) */
+@keyframes mascotBlinkOpen {
+	0%, 93%, 100% {
+		opacity: 1;
+	}
+	94%, 98% {
+		opacity: 0;
+	}
+}
+
+.mascot-blink-open {
+	animation-name: mascotBlinkOpen;
+	animation-timing-function: step-end;
+	animation-iteration-count: infinite;
+}
+
+@keyframes mascotBlinkClosed {
+	0%, 93%, 100% {
+		opacity: 0;
+	}
+	94%, 98% {
+		opacity: 1;
+	}
+}
+
+.mascot-blink-closed {
+	animation-name: mascotBlinkClosed;
+	animation-timing-function: step-end;
+	animation-iteration-count: infinite;
+}
+
+/* Atmospheric ambient gradient breathing & drift */
+@keyframes gradientAmbientBreath {
+	0%, 100% {
+		opacity: 0.65;
+		transform: scale(1) translateY(0);
+	}
+	50% {
+		opacity: 0.88;
+		transform: scale(1.04) translateY(10px);
+	}
+}
+
+.gradient-ambient-breath {
+	animation: gradientAmbientBreath 16s ease-in-out infinite;
+	will-change: transform, opacity;
+}
+
+/* ==========================================================================
+   Liquid Lens Optical Surface (Ultra-Performant GPU-Composited Glass Effect)
+   Optimized for buttery 60fps on budget hardware (Infinix, Mali GPUs)
+   ========================================================================== */
+
+.liquid-lens {
+	position: relative;
+	isolation: isolate;
+	background: linear-gradient(
+		135deg,
+		rgba(255, 255, 255, 0.08) 0%,
+		rgba(255, 255, 255, 0.025) 45%,
+		rgba(255, 255, 255, 0.005) 100%
+	);
+	backdrop-filter: blur(16px) saturate(175%) contrast(105%);
+	-webkit-backdrop-filter: blur(16px) saturate(175%) contrast(105%);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow:
+		inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.55),
+		inset 0 -2px 3px 0 rgba(0, 0, 0, 0.45),
+		0 20px 48px -12px rgba(0, 0, 0, 0.65),
+		0 0 0 1px rgba(255, 255, 255, 0.03);
+	overflow: hidden;
+	transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+	            border-color 0.28s ease,
+	            box-shadow 0.28s ease;
+	will-change: transform;
+}
+
+/* Convex liquid surface curvature reflection */
+.liquid-lens::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	background: radial-gradient(
+		ellipse at var(--lens-x, 50%) var(--lens-y, 0%),
+		rgba(255, 255, 255, 0.22) 0%,
+		rgba(255, 255, 255, 0.04) 42%,
+		transparent 72%
+	);
+	z-index: 1;
+	transition: opacity 0.3s ease;
+}
+
+/* Chromatic prism dispersion edge */
+.liquid-lens::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	padding: 1px;
+	background: linear-gradient(
+		135deg,
+		rgba(255, 255, 255, 0.45) 0%,
+		rgba(168, 85, 247, 0.28) 28%,
+		rgba(56, 189, 248, 0.20) 70%,
+		rgba(255, 255, 255, 0.12) 100%
+	);
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask-composite: exclude;
+	z-index: 2;
+}
+
+.liquid-lens:hover {
+	transform: translateY(-2px);
+	border-color: rgba(255, 255, 255, 0.26);
+	box-shadow:
+		inset 0 2px 2px 0 rgba(255, 255, 255, 0.75),
+		inset 0 -2px 3px 0 rgba(0, 0, 0, 0.5),
+		0 28px 64px -14px rgba(0, 0, 0, 0.75),
+		0 0 28px -4px rgba(124, 58, 237, 0.22);
+}
+
+.liquid-lens-content {
+	position: relative;
+	z-index: 3;
+}
+
+/* ==========================================================================
+   Gradual Blur (Single-Layer Eased Progressive Blur Mask)
+   100% GPU-composited, zero extra divs, 60fps on Infinix/budget mobile
+   ========================================================================== */
+
+.gradual-blur-b {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	backdrop-filter: blur(24px) saturate(170%);
+	-webkit-backdrop-filter: blur(24px) saturate(170%);
+	mask-image: linear-gradient(
+		to bottom,
+		rgba(0, 0, 0, 1) 0%,
+		rgba(0, 0, 0, 0.85) 30%,
+		rgba(0, 0, 0, 0.35) 65%,
+		rgba(0, 0, 0, 0) 100%
+	);
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		rgba(0, 0, 0, 1) 0%,
+		rgba(0, 0, 0, 0.85) 30%,
+		rgba(0, 0, 0, 0.35) 65%,
+		rgba(0, 0, 0, 0) 100%
+	);
+	z-index: 1;
+}
+
+.gradual-blur-t {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	backdrop-filter: blur(24px) saturate(170%);
+	-webkit-backdrop-filter: blur(24px) saturate(170%);
+	mask-image: linear-gradient(
+		to top,
+		rgba(0, 0, 0, 1) 0%,
+		rgba(0, 0, 0, 0.85) 30%,
+		rgba(0, 0, 0, 0.35) 65%,
+		rgba(0, 0, 0, 0) 100%
+	);
+	-webkit-mask-image: linear-gradient(
+		to top,
+		rgba(0, 0, 0, 1) 0%,
+		rgba(0, 0, 0, 0.85) 30%,
+		rgba(0, 0, 0, 0.35) 65%,
+		rgba(0, 0, 0, 0) 100%
+	);
+	z-index: 1;
+}
+
+.gradual-blur-surface-b {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	border-radius: inherit;
+	background: linear-gradient(
+		to bottom,
+		rgba(255, 255, 255, 0.08) 0%,
+		rgba(255, 255, 255, 0.02) 50%,
+		transparent 100%
+	);
+	z-index: 2;
+}
+
+/* ==========================================================================
+   Scrollytelling Animations
+   ========================================================================== */
+
+@keyframes stageFloat {
+	0%, 100% {
+		transform: translateY(0px) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-10px) rotate(1deg);
+	}
+}
+
+.animate-stage-float {
+	animation: stageFloat 5s ease-in-out infinite;
+	will-change: transform;
+}
+
+@keyframes pulseAura {
+	0%, 100% {
+		transform: scale(1);
+		opacity: 0.7;
+	}
+	50% {
+		transform: scale(1.08);
+		opacity: 0.95;
+	}
+}
+
+.animate-pulse-aura {
+	animation: pulseAura 6s ease-in-out infinite;
+	will-change: transform, opacity;
+}
+
+
+

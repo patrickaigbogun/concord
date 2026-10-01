@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Outer C Arc: Vibrant Electric Violet/Indigo accent -->
+  <path
+    d="M 68 22 A 38 38 0 1 0 68 78"
+    stroke="#7c3aed"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <!-- Inner Resonance Ring -->
+  <circle
+    cx="50"
+    cy="50"
+    r="16"
+    stroke="#7c3aed"
+    stroke-width="10"
+  />
+</svg>
