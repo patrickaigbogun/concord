@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { LiquidLens } from '../components/LiquidLens'
 import { GradualBlur } from '../components/GradualBlur'
 import { ScrollytellingSection } from '../components/ScrollytellingSection'
+import { MobileBottomBar } from '../components/MobileBottomBar'
 
 export const metadata = {
 	title: 'Concord — Communication for people who think in words',
@@ -37,7 +38,7 @@ export default function LandingPage() {
 					</LiquidLens>
 
 					{/* Pill 3: Buttons on the End */}
-					<LiquidLens className="rounded-full p-1.5 sm:p-2 flex items-center gap-2 pointer-events-auto">
+					<LiquidLens className="hidden md:flex rounded-full p-1.5 sm:p-2 items-center gap-2 pointer-events-auto">
 						<a
 							href="#get-started"
 							className="px-4 py-2 text-sm font-semibold text-neutral-300 hover:text-white transition-colors"
@@ -336,6 +337,9 @@ export default function LandingPage() {
 					</div>
 				</div>
 			</footer>
+
+			{/* Floating Mobile Bottom Navigation Bar */}
+			<MobileBottomBar />
 		</div>
 	)
 }
