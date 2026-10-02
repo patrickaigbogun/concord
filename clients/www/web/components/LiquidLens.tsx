@@ -3,6 +3,7 @@ import React, { useRef, useCallback, memo } from 'react'
 export interface LiquidLensProps extends React.HTMLAttributes<HTMLDivElement> {
 	children?: React.ReactNode
 	className?: string
+	contentClassName?: string
 	/** Enable dynamic cursor-reactive liquid specular sheen */
 	interactive?: boolean
 }
@@ -15,6 +16,7 @@ export interface LiquidLensProps extends React.HTMLAttributes<HTMLDivElement> {
 export const LiquidLens = memo(function LiquidLens({
 	children,
 	className = '',
+	contentClassName = '',
 	interactive = true,
 	onPointerMove,
 	onPointerLeave,
@@ -75,7 +77,7 @@ export const LiquidLens = memo(function LiquidLens({
 			onPointerLeave={handlePointerLeave}
 			{...props}
 		>
-			<div className="liquid-lens-content h-full w-full">{children}</div>
+			<div className={`liquid-lens-content h-full w-full ${contentClassName}`}>{children}</div>
 		</div>
 	)
 })
