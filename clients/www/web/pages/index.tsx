@@ -59,11 +59,6 @@ export default function LandingPage() {
 				<div className="max-w-[1720px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 xl:gap-16 items-center">
 					{/* Left Column: Hero Text & CTAs */}
 					<div className="lg:col-span-5 space-y-7 text-left">
-						<div className="inline-flex items-center gap-2.5 px-5 py-2 border border-[#2e2e2e] text-neutral-200 text-sm uppercase tracking-wider rounded-full font-semibold bg-[#0a0a0a]">
-							<span className="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>
-							The Next Generation Messaging App
-						</div>
-
 						<h1 className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-bold tracking-tight text-white leading-[1.08] font-heading">
 							Communication for people who think in words.
 						</h1>
@@ -72,16 +67,16 @@ export default function LandingPage() {
 							Fast continuous conversations and deliberate published posts living together in sovereign Spaces and federated Realms.
 						</p>
 
-						<div className="flex flex-wrap items-center gap-4 pt-3">
+						<div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 pt-3 w-full">
 							<a
 								href="#get-started"
-								className="px-9 py-4.5 rounded-full bg-white text-black font-bold text-base sm:text-lg hover:bg-neutral-200 transition-colors"
+								className="flex-1 sm:flex-initial text-center px-4 sm:px-9 py-3.5 sm:py-4.5 rounded-full bg-white text-black font-bold text-sm sm:text-lg hover:bg-neutral-200 transition-colors whitespace-nowrap"
 							>
 								Get Started Free
 							</a>
 							<a
 								href="#features"
-								className="px-9 py-4.5 rounded-full border border-[#2e2e2e] text-white font-bold text-base sm:text-lg hover:bg-neutral-900 transition-colors"
+								className="flex-1 sm:flex-initial text-center px-4 sm:px-9 py-3.5 sm:py-4.5 rounded-full border border-[#2e2e2e] text-white font-bold text-sm sm:text-lg hover:bg-neutral-900 transition-colors whitespace-nowrap"
 							>
 								See How It Works
 							</a>
@@ -280,26 +275,7 @@ export default function LandingPage() {
 
 			{/* Section 8: Concord Sovereign Fullscreen Comprehensive Footer & Gigantic Brand Wordmark */}
 			<footer className="min-h-screen w-full flex flex-col justify-between px-6 sm:px-10 lg:px-16 pt-20 pb-8 bg-black text-white relative z-20">
-				<div className="max-w-[1720px] mx-auto w-full">
-					{/* Top Header Bar inside footer */}
-					<div className="flex items-center justify-between pb-16">
-						<div className="flex items-center gap-3">
-							<svg className="w-8 h-8 text-[#7c3aed]" viewBox="0 0 100 100" fill="none">
-								<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
-								<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
-							</svg>
-							<span className="font-extrabold tracking-tight text-2xl text-white font-heading">Concord</span>
-						</div>
-						<div>
-							<a
-								href="#get-started"
-								className="px-7 py-3 text-sm font-bold rounded-full bg-white text-black hover:bg-neutral-200 transition-colors"
-							>
-								Log In
-							</a>
-						</div>
-					</div>
-
+				<div className="max-w-[1720px] mx-auto w-full pt-12">
 					{/* Navigation columns */}
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pt-4 pb-20 text-base max-w-5xl">
 							<div className="space-y-3">
