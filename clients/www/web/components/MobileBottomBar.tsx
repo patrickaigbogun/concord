@@ -72,97 +72,100 @@ export function MobileBottomBar({ className = '' }: MobileBottomBarProps) {
 				}}
 			/>
 
-			{/* Floating Mobile Bottom Navigation Bar (Centered Liquid-Glass Dock) */}
-			<div className={`md:hidden fixed bottom-[3.5%] sm:bottom-6 left-4 right-4 z-50 flex items-center justify-center max-w-sm mx-auto pointer-events-auto ${className}`}>
+			{/* Floating Mobile Bottom Navigation (Split Islands — Vayri-style) */}
+			<div className={`md:hidden fixed bottom-[4%] sm:bottom-6 left-4 right-4 z-50 flex items-center justify-between max-w-sm mx-auto pointer-events-auto ${className}`}>
+				{/* 1. Left Pill: Navigation (Back + Reload) */}
 				<LiquidLens
-					className="h-14 w-full rounded-full shadow-2xl"
-					contentClassName="flex items-center justify-between px-2 sm:px-3 w-full h-full"
+					className="h-12 rounded-full shadow-2xl"
+					contentClassName="flex items-center gap-1.5 px-2.5 h-full"
 				>
-					{/* Left Group: Back & Reload */}
-					<div className="flex items-center gap-1 sm:gap-2">
-						{/* 1. Back Button (Far Left) */}
-						<button
-							type="button"
-							onClick={handleBack}
-							className="size-10 sm:size-11 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-							aria-label="Back"
-							title="Back"
-						>
-							<svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M19 12H5" />
-								<path d="m12 19-7-7 7-7" />
-							</svg>
-						</button>
+					{/* Back Button */}
+					<button
+						type="button"
+						onClick={handleBack}
+						className="size-8.5 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+						aria-label="Back"
+						title="Back"
+					>
+						<svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+							<path d="m15 18-6-6 6-6" />
+						</svg>
+					</button>
 
-						{/* 2. Reload Button (After Back Button) */}
-						<button
-							type="button"
-							onClick={handleReload}
-							className="size-10 sm:size-11 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-							aria-label="Reload page"
-							title="Reload"
+					{/* Reload Button */}
+					<button
+						type="button"
+						onClick={handleReload}
+						className="size-8.5 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+						aria-label="Reload page"
+						title="Reload"
+					>
+						<svg
+							className={`size-4.5 transition-transform duration-500 ${isReloading ? 'rotate-180 animate-spin' : ''}`}
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2.25"
+							strokeLinecap="round"
+							strokeLinejoin="round"
 						>
-							<svg
-								className={`size-5 transition-transform duration-500 ${isReloading ? 'rotate-180 animate-spin' : ''}`}
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2.25"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-								<path d="M3 3v5h5" />
-								<path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-								<path d="M16 21h5v-5" />
-							</svg>
-						</button>
-					</div>
+							<path d="M21 12a9 9 0 1 1-2.64-5.66L21 9" />
+							<path d="M21 3v6h-6" />
+						</svg>
+					</button>
+				</LiquidLens>
 
-					{/* 3. Logo at Center (Always Takes Home) */}
+				{/* 2. Center Island: Floating Logo Orb (Home) */}
+				<LiquidLens
+					className="size-12 rounded-full shadow-2xl p-0.5"
+					contentClassName="size-full flex items-center justify-center"
+				>
 					<button
 						type="button"
 						onClick={handleHome}
-						className="size-11 rounded-full flex items-center justify-center bg-white/10 border border-white/25 hover:border-purple-400/60 shadow-lg shadow-purple-950/40 active:scale-95 transition-all cursor-pointer group shrink-0"
+						className="size-full rounded-full flex items-center justify-center bg-white/5 hover:bg-white/15 active:scale-95 transition-all cursor-pointer group"
 						aria-label="Concord Home"
 						title="Home"
 					>
-						<svg className="size-6 text-[#a855f7] group-hover:scale-105 group-active:scale-95 transition-transform" viewBox="0 0 100 100" fill="none">
+						<svg className="size-6 text-[#a855f7] group-hover:scale-110 transition-transform" viewBox="0 0 100 100" fill="none">
 							<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
 							<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
 						</svg>
 					</button>
+				</LiquidLens>
 
-					{/* Right Group: Download & Contact Us */}
-					<div className="flex items-center gap-1 sm:gap-2">
-						{/* 4. Download Button (At the Right) */}
-						<a
-							href="#get-started"
-							onClick={handleDownload}
-							className="size-10 sm:size-11 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-							aria-label="Download Concord"
-							title="Download"
-						>
-							<svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-								<polyline points="7 10 12 15 17 10" />
-								<line x1="12" x2="12" y1="15" y2="3" />
-							</svg>
-						</a>
+				{/* 3. Right Pill: Actions (Download + Contact Us) */}
+				<LiquidLens
+					className="h-12 rounded-full shadow-2xl"
+					contentClassName="flex items-center gap-1.5 px-2.5 h-full"
+				>
+					{/* Download Button */}
+					<a
+						href="#get-started"
+						onClick={handleDownload}
+						className="size-8.5 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+						aria-label="Download Concord"
+						title="Download"
+					>
+						<svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+							<polyline points="7 10 12 15 17 10" />
+							<line x1="12" x2="12" y1="15" y2="3" />
+						</svg>
+					</a>
 
-						{/* 5. Contact Us Button (To the Far Right) */}
-						<a
-							href="#contact"
-							onClick={handleContact}
-							className="size-10 sm:size-11 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-							aria-label="Contact Us"
-							title="Contact Us"
-						>
-							<svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-							</svg>
-						</a>
-					</div>
+					{/* Contact Us Button */}
+					<a
+						href="#contact"
+						onClick={handleContact}
+						className="size-8.5 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+						aria-label="Contact Us"
+						title="Contact Us"
+					>
+						<svg className="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+						</svg>
+					</a>
 				</LiquidLens>
 			</div>
 		</>
