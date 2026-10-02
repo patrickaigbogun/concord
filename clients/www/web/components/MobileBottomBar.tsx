@@ -63,12 +63,12 @@ export function MobileBottomBar({ className = '' }: MobileBottomBarProps) {
 
 	return (
 		<>
-			{/* Bottom Scroll Mask Overlay (Fades out content smoothly underneath the dock) */}
+			{/* Bottom Scroll Mask Overlay (Subtle gradient fade underneath the dock) */}
 			<div
-				className="md:hidden fixed bottom-0 left-0 right-0 h-32 pointer-events-none z-40 bg-gradient-to-t from-black via-black/80 to-transparent backdrop-blur-[6px]"
+				className="md:hidden fixed bottom-0 left-0 right-0 h-28 pointer-events-none z-40 bg-gradient-to-t from-black/60 to-transparent"
 				style={{
-					maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%)',
-					WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%)',
+					maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+					WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
 				}}
 			/>
 
