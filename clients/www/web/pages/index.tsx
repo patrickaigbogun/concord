@@ -15,7 +15,7 @@ export default function LandingPage() {
 	return (
 		<div className="min-h-screen w-full bg-black text-white selection:bg-white selection:text-black">
 			{/* Floating 3-Part Pill Navigation */}
-			<header className="fixed top-4 sm:top-6 left-0 right-0 z-50 pointer-events-none px-4 sm:px-8 lg:px-12">
+			<header className="hidden md:block fixed top-4 sm:top-6 left-0 right-0 z-50 pointer-events-none px-4 sm:px-8 lg:px-12">
 				<div className="max-w-[1720px] mx-auto flex items-center justify-between gap-4">
 					{/* Pill 1: Logo Section */}
 					<LiquidLens className="rounded-full px-5 py-2.5 sm:px-6 sm:py-3 pointer-events-auto">
@@ -275,7 +275,7 @@ export default function LandingPage() {
 			</section>
 
 			{/* Section 8: Concord Sovereign Fullscreen Comprehensive Footer & Gigantic Brand Wordmark */}
-			<footer className="min-h-screen w-full flex flex-col justify-between px-6 sm:px-10 lg:px-16 pt-20 pb-8 bg-black text-white relative z-20">
+			<footer id="contact" className="min-h-screen w-full flex flex-col justify-between px-6 sm:px-10 lg:px-16 pt-20 pb-28 md:pb-8 bg-black text-white relative z-20">
 				<div className="max-w-[1720px] mx-auto w-full pt-12">
 					{/* Navigation columns */}
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pt-4 pb-20 text-base max-w-5xl">
