@@ -1,0 +1,3 @@
+module concord-gateway
+
+go 1.23.2

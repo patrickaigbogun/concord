@@ -37,3 +37,7 @@ Thumbs.db
 *.swo
 .vercel
 .env*
+
+data/
+keys/
+*.db*
