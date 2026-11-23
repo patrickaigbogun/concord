@@ -43,6 +43,12 @@ type Config struct {
 	S3AccessKey string
 	S3SecretKey string
 	S3PathStyle bool
+
+	// Native Cloudflare R2 REST + OAuth Auto-Refresh Configuration
+	CFR2Enabled        bool
+	CFR2AccountID      string
+	CFR2Bucket         string
+	CFR2WranglerConfig string
 }
 
 type cachedAuthUser struct {
@@ -52,10 +58,14 @@ type cachedAuthUser struct {
 }
 
 type StorageService struct {
-	cfg        Config
-	s3Client   *s3.Client
-	httpClient *http.Client
-	authCache  sync.Map
+	cfg            Config
+	s3Client       *s3.Client
+	httpClient     *http.Client
+	r2HTTPClient   *http.Client
+	r2Mu           sync.Mutex
+	r2OAuthToken   string
+	r2RefreshToken string
+	authCache      sync.Map
 }
 
 type FileAssetResponse struct {
@@ -90,24 +100,33 @@ func main() {
 	s3AccessKey := flag.String("s3-access-key", getEnv("S3_ACCESS_KEY_ID", ""), "S3 access key ID")
 	s3SecretKey := flag.String("s3-secret-key", getEnv("S3_SECRET_ACCESS_KEY", ""), "S3 secret access key")
 	s3PathStyle := flag.Bool("s3-force-path-style", getEnvBool("S3_FORCE_PATH_STYLE", true), "Force path style")
+
+	// Native Cloudflare R2 REST API flags / env vars
+	cfR2AccountID := flag.String("cf-r2-account-id", getEnv("CF_R2_ACCOUNT_ID", ""), "Cloudflare Account ID for native R2 REST storage")
+	cfR2Bucket := flag.String("cf-r2-bucket", getEnv("CF_R2_BUCKET", ""), "Cloudflare R2 bucket name for native R2 REST storage")
+	cfR2WranglerCfg := flag.String("cf-r2-wrangler-config", getEnv("CF_R2_WRANGLER_CONFIG", "/home/ubuntu/.config/.wrangler/config/default.toml"), "Path to Wrangler OAuth config")
 	flag.Parse()
 
 	cfg := Config{
-		Port:        *port,
-		StorageDir:  *storageDir,
-		PublicURL:   strings.TrimRight(*publicURL, "/"),
-		ChatAPIURL:  strings.TrimRight(*chatAPIURL, "/"),
-		IDAPIURL:    strings.TrimRight(*idAPIURL, "/"),
-		InternalKey: *internalKey,
-		RequireAuth: *requireAuth,
-		MaxUploadMB: *maxMB,
-		S3Enabled:   *s3Bucket != "",
-		S3Bucket:    *s3Bucket,
-		S3Region:    *s3Region,
-		S3Endpoint:  *s3Endpoint,
-		S3AccessKey: *s3AccessKey,
-		S3SecretKey: *s3SecretKey,
-		S3PathStyle: *s3PathStyle,
+		Port:               *port,
+		StorageDir:         *storageDir,
+		PublicURL:          strings.TrimRight(*publicURL, "/"),
+		ChatAPIURL:         strings.TrimRight(*chatAPIURL, "/"),
+		IDAPIURL:           strings.TrimRight(*idAPIURL, "/"),
+		InternalKey:        *internalKey,
+		RequireAuth:        *requireAuth,
+		MaxUploadMB:        *maxMB,
+		S3Enabled:          *s3Bucket != "",
+		S3Bucket:           *s3Bucket,
+		S3Region:           *s3Region,
+		S3Endpoint:         *s3Endpoint,
+		S3AccessKey:        *s3AccessKey,
+		S3SecretKey:        *s3SecretKey,
+		S3PathStyle:        *s3PathStyle,
+		CFR2Enabled:        *cfR2AccountID != "" && *cfR2Bucket != "",
+		CFR2AccountID:      *cfR2AccountID,
+		CFR2Bucket:         *cfR2Bucket,
+		CFR2WranglerConfig: *cfR2WranglerCfg,
 	}
 
 	var s3Client *s3.Client
@@ -118,6 +137,8 @@ func main() {
 		}
 		s3Client = client
 		log.Printf("✓ S3-Compatible storage initialized (Bucket: %s, Endpoint: %s)", cfg.S3Bucket, cfg.S3Endpoint)
+	} else if cfg.CFR2Enabled {
+		log.Printf("✓ Cloudflare R2 storage initialized (Bucket: %s, Account: %s)", cfg.CFR2Bucket, cfg.CFR2AccountID)
 	} else {
 		if err := os.MkdirAll(cfg.StorageDir, 0755); err != nil {
 			log.Fatalf("Fatal: Cannot create storage directory: %v", err)
@@ -126,9 +147,10 @@ func main() {
 	}
 
 	svc := &StorageService{
-		cfg:        cfg,
-		s3Client:   s3Client,
-		httpClient: &http.Client{Timeout: 5 * time.Second},
+		cfg:          cfg,
+		s3Client:     s3Client,
+		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		r2HTTPClient: &http.Client{Timeout: 120 * time.Second},
 	}
 
 	mux := http.NewServeMux()
@@ -153,6 +175,8 @@ func main() {
 		backend := "local"
 		if svc.cfg.S3Enabled {
 			backend = "s3-compatible"
+		} else if svc.cfg.CFR2Enabled {
+			backend = "cloudflare-r2"
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -407,6 +431,36 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "Failed to store in S3", http.StatusInternalServerError)
 			return
 		}
+	} else if svc.cfg.CFR2Enabled {
+		backendUsed = "cloudflare-r2"
+		tmpFile, err := os.CreateTemp("", "concord-r2-upload-*")
+		if err != nil {
+			http.Error(w, "Failed to allocate temporary upload file", http.StatusInternalServerError)
+			return
+		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
+
+		mw := io.MultiWriter(tmpFile, hasher)
+		if n > 0 {
+			if _, err := mw.Write(sniffBuf[:n]); err != nil {
+				http.Error(w, "Failed to write upload buffer", http.StatusInternalServerError)
+				return
+			}
+		}
+		written, err := io.Copy(mw, file)
+		if err != nil {
+			http.Error(w, "Failed to read upload stream", http.StatusInternalServerError)
+			return
+		}
+		totalBytes = int64(n) + written
+
+		r2Key := fmt.Sprintf("concord/%s/%s", fileID, sanitizedFilename)
+		if err := svc.putR2Object(r.Context(), r2Key, tmpFile, totalBytes, detectedContentType); err != nil {
+			log.Printf("❌ Cloudflare R2 upload error: %v", err)
+			http.Error(w, "Failed to store in Cloudflare R2", http.StatusInternalServerError)
+			return
+		}
 	} else {
 		// Local disk storage
 		fileDir := filepath.Join(svc.cfg.StorageDir, fileID)
@@ -581,6 +635,11 @@ func (svc *StorageService) handleServeFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if svc.cfg.CFR2Enabled {
+		svc.serveR2Object(w, r, fileID, filename)
+		return
+	}
+
 	// Local filesystem storage
 	fileDir := filepath.Join(svc.cfg.StorageDir, fileID)
 	var targetFile string
@@ -669,3 +728,208 @@ func getEnvBool(key string, defaultVal bool) bool {
 	}
 	return defaultVal
 }
+
+func parseTOMLValue(content, key string) string {
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, key) {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) == 2 {
+				return strings.Trim(strings.TrimSpace(parts[1]), `"'`)
+			}
+		}
+	}
+	return ""
+}
+
+func (svc *StorageService) getR2OAuthToken(forceRefresh bool) (string, error) {
+	svc.r2Mu.Lock()
+	defer svc.r2Mu.Unlock()
+
+	if !forceRefresh && svc.r2OAuthToken != "" {
+		return svc.r2OAuthToken, nil
+	}
+
+	raw, err := os.ReadFile(svc.cfg.CFR2WranglerConfig)
+	if err == nil {
+		content := string(raw)
+		tok := parseTOMLValue(content, "oauth_token")
+		rt := parseTOMLValue(content, "refresh_token")
+		if rt != "" {
+			svc.r2RefreshToken = rt
+		}
+		if !forceRefresh && tok != "" {
+			svc.r2OAuthToken = tok
+			return tok, nil
+		}
+	}
+
+	if svc.r2RefreshToken == "" {
+		return "", fmt.Errorf("missing Cloudflare R2 OAuth refresh token")
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "refresh_token")
+	form.Set("refresh_token", svc.r2RefreshToken)
+	form.Set("client_id", "54d11594-84e4-41aa-b438-e81b8fa78ee7")
+
+	req, err := http.NewRequest(http.MethodPost, "https://dash.cloudflare.com/oauth2/token", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := svc.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("cloudflare oauth refresh returned status %d", resp.StatusCode)
+	}
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil || tokenResp.AccessToken == "" {
+		return "", fmt.Errorf("failed to decode refreshed oauth token")
+	}
+
+	svc.r2OAuthToken = tokenResp.AccessToken
+	if tokenResp.RefreshToken != "" {
+		svc.r2RefreshToken = tokenResp.RefreshToken
+	}
+
+	// Persist refreshed token back to wrangler config
+	if err == nil && len(raw) > 0 {
+		updated := string(raw)
+		oldTok := parseTOMLValue(updated, "oauth_token")
+		oldRT := parseTOMLValue(updated, "refresh_token")
+		if oldTok != "" {
+			updated = strings.Replace(updated, fmt.Sprintf(`oauth_token = "%s"`, oldTok), fmt.Sprintf(`oauth_token = "%s"`, svc.r2OAuthToken), 1)
+		}
+		if oldRT != "" && svc.r2RefreshToken != "" {
+			updated = strings.Replace(updated, fmt.Sprintf(`refresh_token = "%s"`, oldRT), fmt.Sprintf(`refresh_token = "%s"`, svc.r2RefreshToken), 1)
+		}
+		_ = os.WriteFile(svc.cfg.CFR2WranglerConfig, []byte(updated), 0600)
+	}
+
+	return svc.r2OAuthToken, nil
+}
+
+func (svc *StorageService) putR2Object(ctx context.Context, key string, file *os.File, size int64, contentType string) error {
+	endpoint := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/r2/buckets/%s/objects/%s",
+		svc.cfg.CFR2AccountID, svc.cfg.CFR2Bucket, key)
+
+	for attempt := 0; attempt < 2; attempt++ {
+		tok, err := svc.getR2OAuthToken(attempt > 0)
+		if err != nil {
+			return err
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, file)
+		if err != nil {
+			return err
+		}
+		req.ContentLength = size
+		req.Header.Set("Authorization", "Bearer "+tok)
+		req.Header.Set("Content-Type", contentType)
+
+		resp, err := svc.r2HTTPClient.Do(req)
+		if err != nil {
+			return err
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			continue
+		}
+		if resp.StatusCode >= 300 {
+			return fmt.Errorf("r2 put status %d", resp.StatusCode)
+		}
+		return nil
+	}
+	return fmt.Errorf("r2 put unauthorized after token refresh")
+}
+
+func (svc *StorageService) serveR2Object(w http.ResponseWriter, r *http.Request, fileID, filename string) {
+	if filename == "" {
+		http.NotFound(w, r)
+		return
+	}
+	key := fmt.Sprintf("concord/%s/%s", fileID, filename)
+	endpoint := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/r2/buckets/%s/objects/%s",
+		svc.cfg.CFR2AccountID, svc.cfg.CFR2Bucket, key)
+
+	for attempt := 0; attempt < 2; attempt++ {
+		tok, err := svc.getR2OAuthToken(attempt > 0)
+		if err != nil {
+			http.Error(w, "Storage auth error", http.StatusInternalServerError)
+			return
+		}
+
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+		if err != nil {
+			http.Error(w, "Request error", http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set("Authorization", "Bearer "+tok)
+		if rng := r.Header.Get("Range"); rng != "" {
+			req.Header.Set("Range", rng)
+		}
+
+		resp, err := svc.r2HTTPClient.Do(req)
+		if err != nil {
+			http.Error(w, "Upstream R2 error", http.StatusBadGateway)
+			return
+		}
+
+		if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && attempt == 0 {
+			resp.Body.Close()
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			http.NotFound(w, r)
+			return
+		}
+		if resp.StatusCode >= 300 {
+			http.Error(w, "R2 fetch error", http.StatusBadGateway)
+			return
+		}
+
+		contentType := resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		setSecurityAndDispositionHeaders(w, filename, contentType)
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Accept-Ranges", "bytes")
+
+		if etag := resp.Header.Get("ETag"); etag != "" {
+			w.Header().Set("ETag", etag)
+		}
+		if cl := resp.Header.Get("Content-Length"); cl != "" {
+			w.Header().Set("Content-Length", cl)
+		}
+		if cr := resp.Header.Get("Content-Range"); cr != "" {
+			w.Header().Set("Content-Range", cr)
+			w.WriteHeader(http.StatusPartialContent)
+		}
+
+		if r.Method == http.MethodHead {
+			return
+		}
+		_, _ = io.Copy(w, resp.Body)
+		return
+	}
+}
+
