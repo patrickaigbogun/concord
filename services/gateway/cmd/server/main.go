@@ -150,15 +150,9 @@ func (g *Gateway) Handler() http.Handler {
 			return
 		}
 
-		// 2. Storage & Media routes -> concord-storage
-		if path == "/upload" || strings.HasPrefix(path, "/files/") {
-			g.storageProxy.ServeHTTP(w, r)
-			logRequest("STORAGE", r.Method, path, start)
-			return
-		}
-
-		// 3. Chat & Core API routes -> concord-chat
+		// 2. Chat & Core API routes -> concord-chat
 		if strings.HasPrefix(path, "/api/") ||
+			strings.HasPrefix(path, "/socket/") ||
 			strings.HasPrefix(path, "/swagger") ||
 			path == "/openapi.json" {
 			g.chatProxy.ServeHTTP(w, r)

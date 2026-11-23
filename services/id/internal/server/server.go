@@ -1,12 +1,14 @@
 package server
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -822,16 +824,12 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request) {
 				ext := strings.ToLower(filepath.Ext(header.Filename))
 				switch ext {
 				case ".jpg", ".jpeg", ".png", ".webp", ".gif":
-					_ = os.MkdirAll("./data/avatars", 0755)
-					filename := fmt.Sprintf("%s_%d%s", user.ID, time.Now().Unix(), ext)
-					dstPath := filepath.Join("./data/avatars", filename)
-					if dst, err := os.Create(dstPath); err == nil {
-						_, copyErr := io.Copy(dst, io.LimitReader(file, 5<<20))
-						dst.Close()
-						if copyErr == nil {
-							avatarURL = s.Issuer + "/avatars/" + filename
-						}
+					uploadedURL, uploadErr := s.uploadToConcordStorage(user, file, header.Filename)
+					if uploadErr != nil {
+						http.Redirect(w, r, "/profile?err="+url.QueryEscape("Avatar storage upload failed: "+uploadErr.Error()), http.StatusSeeOther)
+						return
 					}
+					avatarURL = uploadedURL
 				default:
 					http.Redirect(w, r, "/profile?err=Unsupported+image+format+(use+JPG,+PNG,+WebP,+or+GIF)", http.StatusSeeOther)
 					return
@@ -1093,4 +1091,61 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/oauth/authorize?client_id=concord_id&redirect_uri="+url.QueryEscape(s.Issuer+"/profile"), http.StatusSeeOther)
+}
+
+func (s *Server) uploadToConcordStorage(user *db.User, src io.Reader, filename string) (string, error) {
+	storageBase := os.Getenv("STORAGE_URL")
+	if storageBase == "" {
+		storageBase = "https://r2.concord.dexx.systems"
+	}
+	storageBase = strings.TrimRight(storageBase, "/")
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	part, err := mw.CreateFormFile("file", filepath.Base(filename))
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(part, io.LimitReader(src, 5<<20)); err != nil {
+		return "", err
+	}
+	_ = mw.Close()
+
+	token, err := s.Keys.SignToken(crypto.UserClaims{
+		UserID:      user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		DisplayName: user.DisplayName,
+		AvatarURL:   user.AvatarURL,
+	}, 5*time.Minute)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, storageBase+"/upload", &body)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("storage responded with status %d", resp.StatusCode)
+	}
+
+	var result struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || result.URL == "" {
+		return "", fmt.Errorf("invalid storage response")
+	}
+
+	return result.URL, nil
 }
