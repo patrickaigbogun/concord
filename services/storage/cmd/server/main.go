@@ -11,9 +11,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -24,25 +26,36 @@ import (
 )
 
 type Config struct {
-	Port         string
-	StorageDir   string
-	PublicURL    string
-	ChatAPIURL   string
-	MaxUploadMB  int64
+	Port        string
+	StorageDir  string
+	PublicURL   string
+	ChatAPIURL  string
+	IDAPIURL    string
+	InternalKey string
+	RequireAuth bool
+	MaxUploadMB int64
 
 	// S3 Configuration (Works for AWS S3, MinIO, R2, Wasabi, B2)
-	S3Enabled    bool
-	S3Bucket     string
-	S3Region     string
-	S3Endpoint   string
-	S3AccessKey  string
-	S3SecretKey  string
-	S3PathStyle  bool
+	S3Enabled   bool
+	S3Bucket    string
+	S3Region    string
+	S3Endpoint  string
+	S3AccessKey string
+	S3SecretKey string
+	S3PathStyle bool
+}
+
+type cachedAuthUser struct {
+	UserID    string
+	Username  string
+	ExpiresAt time.Time
 }
 
 type StorageService struct {
-	cfg      Config
-	s3Client *s3.Client
+	cfg        Config
+	s3Client   *s3.Client
+	httpClient *http.Client
+	authCache  sync.Map
 }
 
 type FileAssetResponse struct {
@@ -65,15 +78,18 @@ func main() {
 	storageDir := flag.String("storage-dir", getEnv("STORAGE_DIR", "./data/files"), "Directory for local file storage")
 	publicURL := flag.String("public-url", getEnv("PUBLIC_URL", "http://localhost:4002"), "Public base URL")
 	chatAPIURL := flag.String("chat-api-url", getEnv("CHAT_API_URL", "http://localhost:4000"), "Phoenix Chat API base URL")
+	idAPIURL := flag.String("id-api-url", getEnv("ID_API_URL", "http://127.0.0.1:4001"), "Concord ID base URL for token verification")
+	internalKey := flag.String("internal-key", getEnv("STORAGE_INTERNAL_KEY", ""), "Optional internal service key for server-to-server uploads")
+	requireAuth := flag.Bool("require-auth", getEnvBool("REQUIRE_AUTH", true), "Require Concord ID Bearer token on /upload")
 	maxMB := flag.Int64("max-mb", 500, "Maximum upload size in Megabytes")
 
 	// S3 flags / env vars
 	s3Bucket := flag.String("s3-bucket", getEnv("S3_BUCKET", ""), "S3 bucket name (if set, uses S3-compatible backend)")
-	s3Region := flag.String("s3-region", getEnv("S3_REGION", "us-east-1"), "S3 region")
-	s3Endpoint := flag.String("s3-endpoint", getEnv("S3_ENDPOINT", ""), "Custom S3 endpoint (e.g. http://localhost:9000 for MinIO)")
+	s3Region := flag.String("s3-region", getEnv("S3_REGION", "auto"), "S3 region (use 'auto' for Cloudflare R2)")
+	s3Endpoint := flag.String("s3-endpoint", getEnv("S3_ENDPOINT", ""), "Custom S3 endpoint (e.g. R2 or MinIO)")
 	s3AccessKey := flag.String("s3-access-key", getEnv("S3_ACCESS_KEY_ID", ""), "S3 access key ID")
 	s3SecretKey := flag.String("s3-secret-key", getEnv("S3_SECRET_ACCESS_KEY", ""), "S3 secret access key")
-	s3PathStyle := flag.Bool("s3-force-path-style", getEnvBool("S3_FORCE_PATH_STYLE", true), "Force path style (standard for MinIO)")
+	s3PathStyle := flag.Bool("s3-force-path-style", getEnvBool("S3_FORCE_PATH_STYLE", true), "Force path style")
 	flag.Parse()
 
 	cfg := Config{
@@ -81,6 +97,9 @@ func main() {
 		StorageDir:  *storageDir,
 		PublicURL:   strings.TrimRight(*publicURL, "/"),
 		ChatAPIURL:  strings.TrimRight(*chatAPIURL, "/"),
+		IDAPIURL:    strings.TrimRight(*idAPIURL, "/"),
+		InternalKey: *internalKey,
+		RequireAuth: *requireAuth,
 		MaxUploadMB: *maxMB,
 		S3Enabled:   *s3Bucket != "",
 		S3Bucket:    *s3Bucket,
@@ -107,8 +126,9 @@ func main() {
 	}
 
 	svc := &StorageService{
-		cfg:      cfg,
-		s3Client: s3Client,
+		cfg:        cfg,
+		s3Client:   s3Client,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
 
 	mux := http.NewServeMux()
@@ -117,7 +137,8 @@ func main() {
 		return func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Space-Id")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Space-Id, X-Storage-Key, Range")
+			w.Header().Set("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges, ETag")
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusOK)
 				return
@@ -134,10 +155,11 @@ func main() {
 			backend = "s3-compatible"
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "ok",
-			"service": "concord-storage",
-			"backend": backend,
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":       "ok",
+			"service":      "concord-storage",
+			"backend":      backend,
+			"auth_enabled": svc.cfg.RequireAuth,
 		})
 	})
 
@@ -151,7 +173,8 @@ func main() {
 	}
 
 	log.Printf("⚡ Concord Storage listening on %s", addr)
-	log.Printf("   • Public URL: %s", cfg.PublicURL)
+	log.Printf("   • Public URL:   %s", cfg.PublicURL)
+	log.Printf("   • Concord ID:   %s (Auth Required: %v)", cfg.IDAPIURL, cfg.RequireAuth)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Fatal: Storage server error: %v", err)
@@ -194,10 +217,92 @@ func initS3(cfg Config) (*s3.Client, error) {
 	return client, nil
 }
 
+// authenticateRequest verifies the caller's Concord ID Bearer JWT (or internal service key)
+func (svc *StorageService) authenticateRequest(r *http.Request) (string, error) {
+	// 1. Check optional internal service key
+	if svc.cfg.InternalKey != "" && r.Header.Get("X-Storage-Key") == svc.cfg.InternalKey {
+		uid := r.Header.Get("X-User-Id")
+		if uid == "" {
+			uid = "system"
+		}
+		return uid, nil
+	}
+
+	// 2. Extract Bearer token
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", fmt.Errorf("missing or invalid Authorization Bearer token")
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if token == "" {
+		return "", fmt.Errorf("empty Bearer token")
+	}
+
+	// 3. Check short-lived in-memory verification cache (60s TTL)
+	tokenHash := sha256.Sum256([]byte(token))
+	cacheKey := hex.EncodeToString(tokenHash[:])
+	if val, ok := svc.authCache.Load(cacheKey); ok {
+		cached := val.(cachedAuthUser)
+		if time.Now().Before(cached.ExpiresAt) {
+			return cached.UserID, nil
+		}
+		svc.authCache.Delete(cacheKey)
+	}
+
+	// 4. Verify against Concord ID /oauth/userinfo
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, svc.cfg.IDAPIURL+"/oauth/userinfo", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to construct auth verification request")
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := svc.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("identity service unreachable")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("invalid or expired Concord ID token")
+	}
+
+	var info struct {
+		Sub               string `json:"sub"`
+		PreferredUsername string `json:"preferred_username"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil || info.Sub == "" {
+		return "", fmt.Errorf("failed to decode token claims")
+	}
+
+	svc.authCache.Store(cacheKey, cachedAuthUser{
+		UserID:    info.Sub,
+		Username:  info.PreferredUsername,
+		ExpiresAt: time.Now().Add(60 * time.Second),
+	})
+
+	return info.Sub, nil
+}
+
 func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	// Authenticate caller via Concord ID
+	var verifiedUserID string
+	if svc.cfg.RequireAuth {
+		uid, err := svc.authenticateRequest(r)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"error":             "unauthorized",
+				"error_description": err.Error(),
+			})
+			return
+		}
+		verifiedUserID = uid
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, svc.cfg.MaxUploadMB*1024*1024)
@@ -206,6 +311,9 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Upload failed or exceeded size: %v", err), http.StatusBadRequest)
 		return
+	}
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
 	}
 
 	file, header, err := r.FormFile("file")
@@ -219,14 +327,18 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 	if spaceID == "" {
 		spaceID = r.Header.Get("X-Space-Id")
 	}
-	uploaderID := r.FormValue("user_id")
+
+	uploaderID := verifiedUserID
 	if uploaderID == "" {
-		uploaderID = r.Header.Get("X-User-Id")
+		uploaderID = r.FormValue("user_id")
+		if uploaderID == "" {
+			uploaderID = r.Header.Get("X-User-Id")
+		}
 	}
 
 	fileID := uuid.New().String()
 	sanitizedFilename := filepath.Base(header.Filename)
-	if sanitizedFilename == "." || sanitizedFilename == "/" {
+	if sanitizedFilename == "." || sanitizedFilename == "/" || sanitizedFilename == "" {
 		sanitizedFilename = "upload.bin"
 	}
 
@@ -241,8 +353,12 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 	}
 
 	detectedContentType := http.DetectContentType(sniffBuf[:n])
-	if header.Header.Get("Content-Type") != "" && header.Header.Get("Content-Type") != "application/octet-stream" {
-		detectedContentType = header.Header.Get("Content-Type")
+	clientCT := header.Header.Get("Content-Type")
+	if clientCT != "" && clientCT != "application/octet-stream" {
+		// Never allow client header to override a script/HTML detection or spoof safe media if sniffed as HTML
+		if !strings.HasPrefix(detectedContentType, "text/html") && !strings.HasPrefix(detectedContentType, "text/xml") {
+			detectedContentType = clientCT
+		}
 	}
 
 	var totalBytes int64
@@ -250,11 +366,21 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 
 	if svc.cfg.S3Enabled {
 		backendUsed = "s3"
-		// Buffer data for S3 upload
-		var s3Buf bytes.Buffer
-		mw := io.MultiWriter(&s3Buf, hasher)
+		// Stream upload to a temporary disk file instead of buffering up to 500MB in RAM
+		tmpFile, err := os.CreateTemp("", "concord-s3-upload-*")
+		if err != nil {
+			http.Error(w, "Failed to allocate temporary upload file", http.StatusInternalServerError)
+			return
+		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
+
+		mw := io.MultiWriter(tmpFile, hasher)
 		if n > 0 {
-			_, _ = mw.Write(sniffBuf[:n])
+			if _, err := mw.Write(sniffBuf[:n]); err != nil {
+				http.Error(w, "Failed to write upload buffer", http.StatusInternalServerError)
+				return
+			}
 		}
 		written, err := io.Copy(mw, file)
 		if err != nil {
@@ -263,12 +389,18 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 		}
 		totalBytes = int64(n) + written
 
+		if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, "Failed to seek temporary file", http.StatusInternalServerError)
+			return
+		}
+
 		s3Key := fmt.Sprintf("concord/%s/%s", fileID, sanitizedFilename)
-		_, err = svc.s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket:      aws.String(svc.cfg.S3Bucket),
-			Key:         aws.String(s3Key),
-			Body:        bytes.NewReader(s3Buf.Bytes()),
-			ContentType: aws.String(detectedContentType),
+		_, err = svc.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
+			Bucket:        aws.String(svc.cfg.S3Bucket),
+			Key:           aws.String(s3Key),
+			Body:          tmpFile,
+			ContentLength: aws.Int64(totalBytes),
+			ContentType:   aws.String(detectedContentType),
 		})
 		if err != nil {
 			log.Printf("❌ S3 upload error: %v", err)
@@ -293,7 +425,10 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 
 		mw := io.MultiWriter(destFile, hasher)
 		if n > 0 {
-			_, _ = mw.Write(sniffBuf[:n])
+			if _, err := mw.Write(sniffBuf[:n]); err != nil {
+				http.Error(w, "Disk write error", http.StatusInternalServerError)
+				return
+			}
 		}
 		written, err := io.Copy(mw, file)
 		if err != nil {
@@ -304,7 +439,7 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 	}
 
 	shaHex := hex.EncodeToString(hasher.Sum(nil))
-	publicFileURL := fmt.Sprintf("%s/files/%s/%s", svc.cfg.PublicURL, fileID, urlPathEscape(sanitizedFilename))
+	publicFileURL := fmt.Sprintf("%s/files/%s/%s", svc.cfg.PublicURL, fileID, url.PathEscape(sanitizedFilename))
 
 	resp := FileAssetResponse{
 		ID:          fileID,
@@ -329,7 +464,42 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// isUnsafeInlineAsset checks if a file extension or content type could execute scripts in a browser
+func isUnsafeInlineAsset(filename, contentType string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".html", ".htm", ".xhtml", ".svg", ".svgz", ".xml", ".js", ".mjs", ".swf":
+		return true
+	}
+	ct := strings.ToLower(contentType)
+	if strings.Contains(ct, "text/html") ||
+		strings.Contains(ct, "image/svg") ||
+		strings.Contains(ct, "application/xhtml") ||
+		strings.Contains(ct, "text/xml") ||
+		strings.Contains(ct, "application/xml") ||
+		strings.Contains(ct, "javascript") {
+		return true
+	}
+	return false
+}
+
+func setSecurityAndDispositionHeaders(w http.ResponseWriter, filename, contentType string) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+
+	safeName := strings.ReplaceAll(filepath.Base(filename), `"`, "")
+	if isUnsafeInlineAsset(safeName, contentType) {
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, safeName))
+	}
+}
+
 func (svc *StorageService) handleServeFiles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	pathPart := strings.TrimPrefix(r.URL.Path, "/files/")
 	parts := strings.SplitN(pathPart, "/", 2)
 	if len(parts) == 0 || parts[0] == "" {
@@ -337,49 +507,93 @@ func (svc *StorageService) handleServeFiles(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	fileID := parts[0]
+	fileID := filepath.Base(parts[0])
 	filename := ""
 	if len(parts) == 2 {
-		filename = parts[1]
+		if unescaped, err := url.PathUnescape(parts[1]); err == nil {
+			filename = filepath.Base(unescaped)
+		} else {
+			filename = filepath.Base(parts[1])
+		}
 	}
 
-	// Cache for 1 year (immutable asset)
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-
 	if svc.cfg.S3Enabled {
-		s3Key := fmt.Sprintf("concord/%s/%s", fileID, filename)
-		out, err := svc.s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
+		var s3Key string
+		if filename != "" {
+			s3Key = fmt.Sprintf("concord/%s/%s", fileID, filename)
+		} else {
+			// Resolve key by prefix if filename was omitted
+			listOut, err := svc.s3Client.ListObjectsV2(r.Context(), &s3.ListObjectsV2Input{
+				Bucket:  aws.String(svc.cfg.S3Bucket),
+				Prefix:  aws.String(fmt.Sprintf("concord/%s/", fileID)),
+				MaxKeys: aws.Int32(1),
+			})
+			if err != nil || len(listOut.Contents) == 0 || listOut.Contents[0].Key == nil {
+				http.NotFound(w, r)
+				return
+			}
+			s3Key = *listOut.Contents[0].Key
+			filename = filepath.Base(s3Key)
+		}
+
+		getInput := &s3.GetObjectInput{
 			Bucket: aws.String(svc.cfg.S3Bucket),
 			Key:    aws.String(s3Key),
-		})
+		}
+		rangeHeader := r.Header.Get("Range")
+		if rangeHeader != "" {
+			getInput.Range = aws.String(rangeHeader)
+		}
+
+		out, err := svc.s3Client.GetObject(r.Context(), getInput)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
 		defer out.Body.Close()
 
-		if out.ContentType != nil {
-			w.Header().Set("Content-Type", *out.ContentType)
+		contentType := "application/octet-stream"
+		if out.ContentType != nil && *out.ContentType != "" {
+			contentType = *out.ContentType
+		}
+		setSecurityAndDispositionHeaders(w, filename, contentType)
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Accept-Ranges", "bytes")
+
+		if out.ETag != nil {
+			w.Header().Set("ETag", *out.ETag)
+		}
+		if out.LastModified != nil {
+			w.Header().Set("Last-Modified", out.LastModified.UTC().Format(http.TimeFormat))
 		}
 		if out.ContentLength != nil {
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", *out.ContentLength))
+		}
+		if out.ContentRange != nil && *out.ContentRange != "" {
+			w.Header().Set("Content-Range", *out.ContentRange)
+			w.WriteHeader(http.StatusPartialContent)
+		}
+
+		if r.Method == http.MethodHead {
+			return
 		}
 		_, _ = io.Copy(w, out.Body)
 		return
 	}
 
-	// Local filesystem fallback
+	// Local filesystem storage
 	fileDir := filepath.Join(svc.cfg.StorageDir, fileID)
 	var targetFile string
-	if filename != "" {
-		targetFile = filepath.Join(fileDir, filepath.Base(filename))
+	if filename != "" && filename != "." && filename != "/" {
+		targetFile = filepath.Join(fileDir, filename)
 	} else {
 		entries, err := os.ReadDir(fileDir)
 		if err != nil || len(entries) == 0 {
 			http.NotFound(w, r)
 			return
 		}
-		targetFile = filepath.Join(fileDir, entries[0].Name())
+		filename = entries[0].Name()
+		targetFile = filepath.Join(fileDir, filename)
 	}
 
 	f, err := os.Open(targetFile)
@@ -390,16 +604,23 @@ func (svc *StorageService) handleServeFiles(w http.ResponseWriter, r *http.Reque
 	defer f.Close()
 
 	stat, err := f.Stat()
-	if err != nil {
+	if err != nil || stat.IsDir() {
 		http.NotFound(w, r)
 		return
 	}
 
+	// Sniff first 512 bytes for accurate Content-Type & XSS disposition check
+	sniffBuf := make([]byte, 512)
+	n, _ := f.Read(sniffBuf)
+	_, _ = f.Seek(0, io.SeekStart)
+	contentType := http.DetectContentType(sniffBuf[:n])
+
+	setSecurityAndDispositionHeaders(w, stat.Name(), contentType)
 	http.ServeContent(w, r, stat.Name(), stat.ModTime(), f)
 }
 
 func notifyChatAPI(baseURL, spaceID, uploaderID string, asset FileAssetResponse) {
-	url := fmt.Sprintf("%s/api/v1/spaces/%s/files", baseURL, spaceID)
+	endpoint := fmt.Sprintf("%s/api/v1/spaces/%s/files", baseURL, url.PathEscape(spaceID))
 	payload := map[string]interface{}{
 		"filename":     asset.Filename,
 		"content_type": asset.ContentType,
@@ -417,7 +638,7 @@ func notifyChatAPI(baseURL, spaceID, uploaderID string, asset FileAssetResponse)
 		return
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return
 	}
@@ -429,10 +650,6 @@ func notifyChatAPI(baseURL, spaceID, uploaderID string, asset FileAssetResponse)
 	if err == nil {
 		_ = resp.Body.Close()
 	}
-}
-
-func urlPathEscape(s string) string {
-	return strings.ReplaceAll(s, " ", "%20")
 }
 
 func getEnv(key, defaultVal string) string {
