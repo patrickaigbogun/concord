@@ -87,12 +87,18 @@ defmodule ConcordApiWeb.SpaceController do
       ok: {"Space membership", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def join(conn, %{"id" => space_id, "user_id" => user_id} = params) do
+  def join(conn, %{"id" => space_id} = params) do
+    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
     tag = params["tag"]
-    case Spaces.join_space(space_id, user_id, tag) do
-      {:ok, member} -> json(conn, member)
-      {:error, changeset} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+
+    if user_id do
+      case Spaces.join_space(space_id, user_id, tag) do
+        {:ok, member} -> json(conn, member)
+        {:error, changeset} ->
+          conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+      end
+    else
+      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
     end
   end
 

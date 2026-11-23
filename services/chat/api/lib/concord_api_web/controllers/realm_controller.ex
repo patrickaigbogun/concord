@@ -75,11 +75,17 @@ defmodule ConcordApiWeb.RealmController do
       ok: {"Waiting room admission request", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def join(conn, %{"id" => realm_id, "user_id" => user_id}) do
-    case Realms.request_realm_admission(realm_id, user_id) do
-      {:ok, member} -> json(conn, member)
-      {:error, changeset} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+  def join(conn, %{"id" => realm_id} = params) do
+    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+
+    if user_id do
+      case Realms.request_realm_admission(realm_id, user_id) do
+        {:ok, member} -> json(conn, member)
+        {:error, changeset} ->
+          conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+      end
+    else
+      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
     end
   end
 

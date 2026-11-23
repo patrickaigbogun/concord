@@ -3,6 +3,7 @@ defmodule ConcordApiWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug ConcordApiWeb.Plugs.ConcordAuth
     plug OpenApiSpex.Plug.PutApiSpec, module: ConcordApiWeb.ApiSpec
   end
 
