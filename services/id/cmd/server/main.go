@@ -81,6 +81,14 @@ func seedDefaultClients(d *db.Database) {
 		_, _ = d.Exec(query)
 		log.Println("✓ Default client 'cp_agent' registered for CouchPotato")
 	}
+
+	// 3. Concord Tauri v2 Desktop & Mobile App client (Public PKCE client)
+	if _, err := d.GetClient("concord_app"); err != nil {
+		query := `INSERT OR IGNORE INTO oauth_clients (client_id, client_secret, name, redirect_uris, is_public, created_at)
+		          VALUES ('concord_app', '', 'Concord', 'concord://auth/callback,http://localhost:1420/auth/callback,http://localhost:7990/auth/callback,https://concord.dexx.systems/auth/callback', 1, CURRENT_TIMESTAMP)`
+		_, _ = d.Exec(query)
+		log.Println("✓ Default client 'concord_app' registered for Concord Tauri v2")
+	}
 }
 
 func getEnv(key, defaultVal string) string {
