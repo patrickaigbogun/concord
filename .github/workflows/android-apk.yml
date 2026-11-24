@@ -8,8 +8,6 @@ on:
     paths:
       - 'clients/app/**'
       - '.github/workflows/android-apk.yml'
-    tags:
-      - 'app-v*'
 
 permissions:
   contents: write
