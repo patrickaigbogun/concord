@@ -182,10 +182,10 @@ export default function DownloadPage() {
 
 					<LiquidLens className="hidden md:flex rounded-full p-1.5 sm:p-2 items-center gap-2 pointer-events-auto">
 						<a
-							href="https://id.dexx.systems"
+							href="/app"
 							className="px-4 py-2 text-sm font-semibold text-neutral-300 hover:text-white transition-colors"
 						>
-							Concord ID
+							Open Web App
 						</a>
 						<a
 							href={APK_URL}

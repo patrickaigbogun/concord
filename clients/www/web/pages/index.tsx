@@ -40,13 +40,13 @@ export default function LandingPage() {
 					{/* Pill 3: Buttons on the End */}
 					<LiquidLens className="hidden md:flex rounded-full p-1.5 sm:p-2 items-center gap-2 pointer-events-auto">
 						<a
-							href="#get-started"
+							href="/app"
 							className="px-4 py-2 text-sm font-semibold text-neutral-300 hover:text-white transition-colors"
 						>
 							Log In
 						</a>
 						<a
-							href="#get-started"
+							href="/app"
 							className="px-5 sm:px-6 py-2 sm:py-2.5 text-sm font-bold rounded-full bg-white text-black hover:bg-neutral-200 transition-colors shadow-sm"
 						>
 							Open App
@@ -70,16 +70,16 @@ export default function LandingPage() {
 
 						<div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 pt-3 w-full">
 							<a
-								href="#get-started"
+								href="/app"
 								className="flex-1 sm:flex-initial text-center px-4 sm:px-9 py-3.5 sm:py-4.5 rounded-full bg-white text-black font-bold text-sm sm:text-lg hover:bg-neutral-200 transition-colors whitespace-nowrap"
 							>
-								Get Started Free
+								Open Web App
 							</a>
 							<a
-								href="#features"
+								href="/download"
 								className="flex-1 sm:flex-initial text-center px-4 sm:px-9 py-3.5 sm:py-4.5 rounded-full border border-[#2e2e2e] text-white font-bold text-sm sm:text-lg hover:bg-neutral-900 transition-colors whitespace-nowrap"
 							>
-								See How It Works
+								Download App
 							</a>
 						</div>
 					</div>
