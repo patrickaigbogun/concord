@@ -11,6 +11,7 @@ import type { ChatMessage, FileAsset, RoomViewMode } from '../../lib/types'
 import { AttachmentTray } from '../components/AttachmentTray'
 import { LeftRealmsPanel } from '../components/LeftRealmsPanel'
 import { RealmNoteBar } from '../components/RealmNoteBar'
+import { RealmOverviewModal } from '../components/RealmOverviewModal'
 import { RightSpacePanel } from '../components/RightSpacePanel'
 import { SpaceOrbBar } from '../components/SpaceOrbBar'
 
@@ -33,6 +34,7 @@ export default function ConcordAppPage() {
 	const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
 	const [orbBarExpanded, setOrbBarExpanded] = useState(false) // Collapsible by default
 	const [attachmentOpen, setAttachmentOpen] = useState(false)
+	const [realmOverviewOpen, setRealmOverviewOpen] = useState(false)
 
 	// Mobile 3-panel spatial state: 'left' (Realms) | 'center' (Active Space) | 'right' (Space Mega-Hub)
 	const [mobilePane, setMobilePane] = useState<'left' | 'center' | 'right'>('center')
@@ -216,21 +218,30 @@ export default function ConcordAppPage() {
 							</svg>
 						</button>
 
-						<img
-							src={activeRealm.coverUrl}
-							alt={activeRealm.name}
-							className="w-8 h-8 rounded-xl object-cover border border-white/10 shrink-0"
-						/>
-						<div className="min-w-0">
-							<div className="flex items-center gap-1.5">
-								<span className="text-sm font-bold text-white truncate">{activeSpace.name}</span>
-								<span className="text-xs text-zinc-600">/</span>
-								<span className="text-xs text-zinc-400 truncate">{activeRealm.name}</span>
+						<button
+							type="button"
+							onClick={() => setRealmOverviewOpen(true)}
+							className="flex items-center gap-3 min-w-0 text-left group cursor-pointer focus:outline-none"
+							title="View Realm details & stats"
+						>
+							<img
+								src={activeRealm.coverUrl}
+								alt={activeRealm.name}
+								className="w-8 h-8 rounded-xl object-cover border border-white/10 group-hover:border-[#8b5cf6]/60 transition shrink-0"
+							/>
+							<div className="min-w-0">
+								<div className="flex items-center gap-1.5">
+									<span className="text-sm font-bold text-white truncate group-hover:text-[#c4b5fd] transition">
+										{activeSpace.name}
+									</span>
+									<span className="text-xs text-zinc-600">/</span>
+									<span className="text-xs text-zinc-400 truncate">{activeRealm.name}</span>
+								</div>
+								{activeSpace.description && (
+									<p className="text-[11px] text-zinc-500 truncate">{activeSpace.description}</p>
+								)}
 							</div>
-							{activeSpace.description && (
-								<p className="text-[11px] text-zinc-500 truncate">{activeSpace.description}</p>
-							)}
-						</div>
+						</button>
 					</div>
 
 					<button
@@ -416,6 +427,16 @@ export default function ConcordAppPage() {
 					onCloseMobile={() => setMobilePane('center')}
 				/>
 			</div>
+
+			{/* REALM OVERVIEW & STATS SHEET (Opened by tapping the Top Bar) */}
+			{realmOverviewOpen && (
+				<RealmOverviewModal
+					realm={activeRealm}
+					activeSpaceId={activeSpace.id}
+					onSelectSpace={(id) => setActiveSpaceId(id)}
+					onClose={() => setRealmOverviewOpen(false)}
+				/>
+			)}
 		</div>
 	)
 }
