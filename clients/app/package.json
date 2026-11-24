@@ -1,0 +1,47 @@
+{
+  "dependencies": {
+    "@dex/dev": "workspace:*",
+    "@dex/pie": "workspace:*",
+    "@dex/router": "workspace:*",
+    "@dex/server": "workspace:*",
+    "@tailwindcss/cli": "^4.1.18",
+    "@tauri-apps/api": "^2.12.5",
+    "@tauri-apps/plugin-deep-link": "^2.6.3",
+    "@tauri-apps/plugin-opener": "^2.7.3",
+    "@tauri-apps/plugin-store": "^2.5.1",
+    "elysia": "^1.4.21",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.6",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "bun-types": "latest"
+  },
+  "dex": {
+    "packageVersions": {
+      "@dex/dev": "0.3.0",
+      "@dex/pie": "0.3.0",
+      "@dex/router": "0.3.0",
+      "@dex/server": "0.3.0"
+    }
+  },
+  "name": "concord-app",
+  "private": true,
+  "scripts": {
+    "build": "bun core/bootstrap/build.ts",
+    "dev": "bun core/bootstrap/dev.ts",
+    "start": "NODE_ENV=production ./build/server",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "api:generate": "dex pie generate https://gateway.concord.dexx.systems/api/openapi.json --url https://gateway.concord.dexx.systems"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
+}

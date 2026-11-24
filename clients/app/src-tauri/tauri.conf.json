@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Concord",
+  "version": "0.1.0",
+  "identifier": "systems.dexx.concord",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:7990",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../web/public"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Concord",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 380,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["concord"]
+      },
+      "mobile": [
+        {
+          "scheme": ["concord"],
+          "host": "auth",
+          "pathPrefix": ["/callback"]
+        }
+      ]
+    }
+  }
+}
