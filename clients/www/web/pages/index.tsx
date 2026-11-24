@@ -250,13 +250,13 @@ export default function LandingPage() {
 
 					<div className="pt-2 flex flex-wrap items-center justify-center gap-4">
 						<a
-							href="#features"
+							href="/download"
 							className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-white text-black font-bold text-base sm:text-lg hover:bg-neutral-200 transition-colors shadow-none"
 						>
 							Download Concord
 						</a>
 						<a
-							href="#spaces"
+							href="/app"
 							className="inline-flex items-center gap-2 px-10 py-5 rounded-full border border-[#2e2e2e] text-white font-bold text-base sm:text-lg hover:bg-neutral-900 transition-colors shadow-none"
 						>
 							Open in Browser
