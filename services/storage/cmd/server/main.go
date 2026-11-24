@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +59,12 @@ type cachedAuthUser struct {
 	ExpiresAt time.Time
 }
 
+type uploadBucket struct {
+	tokens     float64
+	lastRefill time.Time
+	lastSeen   time.Time
+}
+
 type StorageService struct {
 	cfg            Config
 	s3Client       *s3.Client
@@ -66,6 +74,51 @@ type StorageService struct {
 	r2OAuthToken   string
 	r2RefreshToken string
 	authCache      sync.Map
+	limitMu        sync.Mutex
+	uploadBuckets  map[string]*uploadBucket
+}
+
+func (svc *StorageService) allowUpload(key string, rpm int, burst float64) (bool, int) {
+	now := time.Now()
+	ratePerSec := float64(rpm) / 60.0
+
+	svc.limitMu.Lock()
+	defer svc.limitMu.Unlock()
+
+	if svc.uploadBuckets == nil {
+		svc.uploadBuckets = make(map[string]*uploadBucket)
+	}
+
+	b, ok := svc.uploadBuckets[key]
+	if !ok {
+		if len(svc.uploadBuckets) >= 25000 {
+			cutoff := now.Add(-2 * time.Minute)
+			for k, v := range svc.uploadBuckets {
+				if v.lastSeen.Before(cutoff) {
+					delete(svc.uploadBuckets, k)
+				}
+			}
+		}
+		b = &uploadBucket{tokens: burst - 1, lastRefill: now, lastSeen: now}
+		svc.uploadBuckets[key] = b
+		return true, 0
+	}
+
+	elapsed := now.Sub(b.lastRefill).Seconds()
+	b.tokens = math.Min(burst, b.tokens+elapsed*ratePerSec)
+	b.lastRefill = now
+	b.lastSeen = now
+
+	if b.tokens < 1.0 {
+		retryAfter := int(math.Ceil((1.0 - b.tokens) / ratePerSec))
+		if retryAfter < 1 {
+			retryAfter = 1
+		}
+		return false, retryAfter
+	}
+
+	b.tokens -= 1.0
+	return true, 0
 }
 
 type FileAssetResponse struct {
@@ -327,6 +380,19 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		verifiedUserID = uid
+
+		// Per-user upload rate limit (20 uploads/min, burst 25)
+		if allowed, retryAfter := svc.allowUpload("upload:"+verifiedUserID, 20, 25); !allowed {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+			w.WriteHeader(http.StatusTooManyRequests)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":       "rate_limit_exceeded",
+				"message":     "Upload rate limit exceeded, please wait before uploading again",
+				"retry_after": retryAfter,
+			})
+			return
+		}
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, svc.cfg.MaxUploadMB*1024*1024)

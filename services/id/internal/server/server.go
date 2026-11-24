@@ -29,6 +29,7 @@ type Server struct {
 	Keys        *crypto.KeyManager
 	Issuer      string
 	Mailer      *email.Mailer
+	Limiter     *RateLimiter
 	loginTmpl   *template.Template
 	docsTmpl    *template.Template
 	profileTmpl *template.Template
@@ -67,6 +68,7 @@ func NewServer(database *db.Database, keys *crypto.KeyManager, issuer string) (*
 		Keys:        keys,
 		Issuer:      issuer,
 		Mailer:      email.NewMailer(issuer),
+		Limiter:     NewRateLimiter(25000),
 		loginTmpl:   tmpl,
 		docsTmpl:    docsTmpl,
 		profileTmpl: profileTmpl,
@@ -97,13 +99,13 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/.well-known/jwks.json", withCORS(s.handleJWKS))
 
 	// OAuth2 Standard Endpoints
-	mux.HandleFunc("/oauth/authorize", s.handleAuthorize)
+	mux.HandleFunc("/oauth/authorize", s.withAuthRateLimit("auth", 10, 12, s.handleAuthorize))
 	mux.HandleFunc("/oauth/token", withCORS(s.handleToken))
 	mux.HandleFunc("/oauth/userinfo", withCORS(s.handleUserInfo))
 
 	// Direct Auth APIs (First-party)
-	mux.HandleFunc("/api/v1/auth/register", withCORS(s.handleRegister))
-	mux.HandleFunc("/api/v1/auth/login", withCORS(s.handleLogin))
+	mux.HandleFunc("/api/v1/auth/register", withCORS(s.withAuthRateLimit("register", 5, 6, s.handleRegister)))
+	mux.HandleFunc("/api/v1/auth/login", withCORS(s.withAuthRateLimit("login", 10, 12, s.handleLogin)))
 	mux.HandleFunc("/api/v1/auth/me", withCORS(s.handleMe))
 
 	// Client App Registration (RFC 7591 & Custom)
@@ -118,10 +120,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/", s.handleRoot)
 	mux.HandleFunc("/profile", s.handleProfile)
 	mux.HandleFunc("/account", s.handleProfile)
-	mux.HandleFunc("/send-magic-link", s.handleSendMagicLink)
+	mux.HandleFunc("/send-magic-link", s.withAuthRateLimit("email", 5, 5, s.handleSendMagicLink))
 	mux.HandleFunc("/magic-login", s.handleMagicLogin)
-	mux.HandleFunc("/forgot-password", s.handleForgotPassword)
-	mux.HandleFunc("/reset-password", s.handleResetPassword)
+	mux.HandleFunc("/forgot-password", s.withAuthRateLimit("email", 5, 5, s.handleForgotPassword))
+	mux.HandleFunc("/reset-password", s.withAuthRateLimit("reset", 5, 6, s.handleResetPassword))
 	mux.HandleFunc("/logout", s.handleLogout)
 
 	// Embedded Brand Logo (Storage & Avatars live exclusively on r2.concord.dexx.systems)
