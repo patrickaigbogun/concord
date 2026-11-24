@@ -20,6 +20,7 @@ type RouteConfig struct {
 	IDServiceURL   string
 	ChatServiceURL string
 	GatewaySecret  string
+	GatewayDomain  string
 }
 
 type verifiedIdentity struct {
@@ -44,12 +45,14 @@ func main() {
 	idURL := flag.String("id-url", getEnv("ID_SERVICE_URL", "http://127.0.0.1:4001"), "Concord ID internal URL")
 	chatURL := flag.String("chat-url", getEnv("CHAT_SERVICE_URL", "http://127.0.0.1:4000"), "Concord Chat API internal URL")
 	gatewaySecret := flag.String("gateway-secret", getEnv("GATEWAY_SHARED_SECRET", ""), "Shared secret for authenticating gateway headers to Chat API")
+	gatewayDomain := flag.String("domain", getEnv("GATEWAY_DOMAIN", "gateway.concord.dexx.systems"), "Public domain of the Gateway")
 	flag.Parse()
 
 	cfg := RouteConfig{
 		IDServiceURL:   strings.TrimRight(*idURL, "/"),
 		ChatServiceURL: strings.TrimRight(*chatURL, "/"),
 		GatewaySecret:  *gatewaySecret,
+		GatewayDomain:  *gatewayDomain,
 	}
 
 	gateway, err := NewGateway(cfg)
@@ -206,7 +209,7 @@ func (g *Gateway) Handler() http.Handler {
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":  "ok",
 				"service": "concord-gateway",
-				"domain":  "gateway.concord.dexx.systems",
+				"domain":  g.config.GatewayDomain,
 				"time":    time.Now().UTC(),
 			})
 			return
