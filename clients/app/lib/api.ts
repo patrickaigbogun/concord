@@ -1,22 +1,5 @@
-import { createPie } from '@dex/pie'
-import type { ApiRoutes } from '@core/api/generated'
 import { CONCORD_CONFIG } from './config'
 import { getSession } from './auth'
-
-/**
- * Legacy Pie API client instance (retained for existing routes).
- */
-export const api = createPie<ApiRoutes>({
-	prefix: '/api',
-	headers: (): Record<string, string> => {
-		const session = getSession()
-		const headers: Record<string, string> = {}
-		if (session?.access_token) {
-			headers.Authorization = `Bearer ${session.access_token}`
-		}
-		return headers
-	},
-})
 
 export type EchoPolicy = 'space_only' | 'realm_only' | 'universal'
 
