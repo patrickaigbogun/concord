@@ -22,11 +22,8 @@ defmodule ConcordApiWeb.UserSocket do
     end
   end
 
-  def connect(%{"user_id" => user_id}, socket, _connect_info) do
-    {:ok, assign(socket, :user_id, user_id)}
-  end
-
   def connect(_params, socket, _connect_info) do
+    # Anonymous / read-only socket connection (no :user_id assigned)
     {:ok, socket}
   end
 

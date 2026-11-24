@@ -30,7 +30,7 @@ defmodule ConcordApiWeb.RealmController do
     ]
 
   def create(conn, params) do
-    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+    user_id = conn.assigns[:current_user_id]
 
     if user_id do
       case Realms.create_realm(params, user_id) do
@@ -40,7 +40,7 @@ defmodule ConcordApiWeb.RealmController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -75,8 +75,8 @@ defmodule ConcordApiWeb.RealmController do
       ok: {"Waiting room admission request", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def join(conn, %{"id" => realm_id} = params) do
-    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+  def join(conn, %{"id" => realm_id}) do
+    user_id = conn.assigns[:current_user_id]
 
     if user_id do
       case Realms.request_realm_admission(realm_id, user_id) do
@@ -85,7 +85,7 @@ defmodule ConcordApiWeb.RealmController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -103,11 +103,23 @@ defmodule ConcordApiWeb.RealmController do
       ok: {"Admitted member", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def admit(conn, %{"id" => realm_id, "user_id" => user_id}) do
-    case Realms.admit_member(realm_id, user_id) do
-      {:ok, member} -> json(conn, member)
-      {:error, changeset} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+  def admit(conn, %{"id" => realm_id, "user_id" => target_user_id}) do
+    curator_id = conn.assigns[:current_user_id]
+
+    cond do
+      is_nil(curator_id) ->
+        conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
+
+      not Realms.is_realm_curator?(realm_id, curator_id) ->
+        conn |> put_status(:forbidden) |> json(%{error: "Only Realm curators can admit members"})
+
+      true ->
+        case Realms.admit_member(realm_id, target_user_id) do
+          {:ok, member} -> json(conn, member)
+          {:error, :not_found} -> conn |> put_status(:not_found) |> json(%{error: "Waiting room entry not found"})
+          {:error, changeset} ->
+            conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
+        end
     end
   end
 

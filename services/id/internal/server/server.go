@@ -124,9 +124,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/reset-password", s.handleResetPassword)
 	mux.HandleFunc("/logout", s.handleLogout)
 
-	// Static Uploaded Avatars & Brand Logo
-	_ = os.MkdirAll("./data/avatars", 0755)
-	mux.Handle("/avatars/", http.StripPrefix("/avatars/", http.FileServer(http.Dir("./data/avatars"))))
+	// Embedded Brand Logo (Storage & Avatars live exclusively on r2.concord.dexx.systems)
 	mux.HandleFunc("/logo.png", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		w.Header().Set("Cache-Control", "public, max-age=86400")

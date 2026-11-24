@@ -19,6 +19,7 @@ import (
 type RouteConfig struct {
 	IDServiceURL   string
 	ChatServiceURL string
+	GatewaySecret  string
 }
 
 type verifiedIdentity struct {
@@ -42,11 +43,13 @@ func main() {
 	port := flag.String("port", getEnv("PORT", "8080"), "Port for Gateway to listen on")
 	idURL := flag.String("id-url", getEnv("ID_SERVICE_URL", "http://127.0.0.1:4001"), "Concord ID internal URL")
 	chatURL := flag.String("chat-url", getEnv("CHAT_SERVICE_URL", "http://127.0.0.1:4000"), "Concord Chat API internal URL")
+	gatewaySecret := flag.String("gateway-secret", getEnv("GATEWAY_SHARED_SECRET", ""), "Shared secret for authenticating gateway headers to Chat API")
 	flag.Parse()
 
 	cfg := RouteConfig{
 		IDServiceURL:   strings.TrimRight(*idURL, "/"),
 		ChatServiceURL: strings.TrimRight(*chatURL, "/"),
+		GatewaySecret:  *gatewaySecret,
 	}
 
 	gateway, err := NewGateway(cfg)
@@ -56,11 +59,10 @@ func main() {
 
 	addr := fmt.Sprintf(":%s", *port)
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      gateway.Handler(),
-		ReadTimeout:  120 * time.Second,
-		WriteTimeout: 120 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:              addr,
+		Handler:           gateway.Handler(),
+		ReadHeaderTimeout: 15 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	log.Printf("🛡️  Concord API Gateway listening on %s (gateway.concord.dexx.systems)", addr)
@@ -232,6 +234,7 @@ func (g *Gateway) Handler() http.Handler {
 			r.Header.Del("X-Display-Name")
 			r.Header.Del("X-Email")
 			r.Header.Del("X-Avatar-Url")
+			r.Header.Del("X-Gateway-Secret")
 
 			// If Bearer token is present, verify against Concord ID and inject verified headers
 			if id, err := g.resolveIdentity(r); err == nil && id != nil {
@@ -240,6 +243,9 @@ func (g *Gateway) Handler() http.Handler {
 				r.Header.Set("X-Display-Name", id.DisplayName)
 				r.Header.Set("X-Email", id.Email)
 				r.Header.Set("X-Avatar-Url", id.AvatarURL)
+				if g.config.GatewaySecret != "" {
+					r.Header.Set("X-Gateway-Secret", g.config.GatewaySecret)
+				}
 			}
 
 			g.chatProxy.ServeHTTP(w, r)

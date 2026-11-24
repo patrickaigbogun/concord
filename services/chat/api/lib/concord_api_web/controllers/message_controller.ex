@@ -42,7 +42,7 @@ defmodule ConcordApiWeb.MessageController do
     ]
 
   def create(conn, %{"space_id" => space_id} = params) do
-    author_id = get_req_header(conn, "x-user-id") |> List.first() || params["author_id"]
+    author_id = conn.assigns[:current_user_id]
 
     if author_id do
       attrs = Map.merge(params, %{"space_id" => space_id, "author_id" => author_id})
@@ -72,7 +72,7 @@ defmodule ConcordApiWeb.MessageController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing author_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -91,8 +91,8 @@ defmodule ConcordApiWeb.MessageController do
       ok: {"Reaction added", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def add_reaction(conn, %{"id" => message_id, "emoji" => emoji} = params) do
-    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+  def add_reaction(conn, %{"id" => message_id, "emoji" => emoji}) do
+    user_id = conn.assigns[:current_user_id]
 
     if user_id do
       case Conversations.add_reaction(message_id, user_id, emoji) do
@@ -102,7 +102,7 @@ defmodule ConcordApiWeb.MessageController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -117,14 +117,14 @@ defmodule ConcordApiWeb.MessageController do
       ok: {"Reaction removed", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def remove_reaction(conn, %{"id" => message_id, "emoji" => emoji} = params) do
-    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+  def remove_reaction(conn, %{"id" => message_id, "emoji" => emoji}) do
+    user_id = conn.assigns[:current_user_id]
 
     if user_id do
       Conversations.remove_reaction(message_id, user_id, emoji)
       json(conn, %{status: "deleted"})
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 end

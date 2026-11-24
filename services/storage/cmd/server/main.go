@@ -510,7 +510,8 @@ func (svc *StorageService) handleUpload(w http.ResponseWriter, r *http.Request) 
 
 	// Notify Phoenix Chat API in background
 	if spaceID != "" && uploaderID != "" && svc.cfg.ChatAPIURL != "" {
-		go notifyChatAPI(svc.cfg.ChatAPIURL, spaceID, uploaderID, resp)
+		callerAuth := r.Header.Get("Authorization")
+		go notifyChatAPI(svc.cfg.ChatAPIURL, spaceID, uploaderID, callerAuth, resp)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -678,7 +679,7 @@ func (svc *StorageService) handleServeFiles(w http.ResponseWriter, r *http.Reque
 	http.ServeContent(w, r, stat.Name(), stat.ModTime(), f)
 }
 
-func notifyChatAPI(baseURL, spaceID, uploaderID string, asset FileAssetResponse) {
+func notifyChatAPI(baseURL, spaceID, uploaderID, authHeader string, asset FileAssetResponse) {
 	endpoint := fmt.Sprintf("%s/api/v1/spaces/%s/files", baseURL, url.PathEscape(spaceID))
 	payload := map[string]interface{}{
 		"filename":     asset.Filename,
@@ -702,6 +703,9 @@ func notifyChatAPI(baseURL, spaceID, uploaderID string, asset FileAssetResponse)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
 	req.Header.Set("X-User-Id", uploaderID)
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -859,10 +863,53 @@ func (svc *StorageService) putR2Object(ctx context.Context, key string, file *os
 	return fmt.Errorf("r2 put unauthorized after token refresh")
 }
 
+func (svc *StorageService) resolveR2Filename(ctx context.Context, fileID string) (string, error) {
+	prefix := url.QueryEscape(fmt.Sprintf("concord/%s/", fileID))
+	endpoint := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/r2/buckets/%s/objects?prefix=%s&per_page=1",
+		svc.cfg.CFR2AccountID, svc.cfg.CFR2Bucket, prefix)
+
+	for attempt := 0; attempt < 2; attempt++ {
+		tok, err := svc.getR2OAuthToken(attempt > 0)
+		if err != nil {
+			return "", err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Authorization", "Bearer "+tok)
+
+		resp, err := svc.httpClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		if (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) && attempt == 0 {
+			resp.Body.Close()
+			continue
+		}
+		defer resp.Body.Close()
+
+		var parsed struct {
+			Result []struct {
+				Key string `json:"key"`
+			} `json:"result"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil || len(parsed.Result) == 0 {
+			return "", fmt.Errorf("not found")
+		}
+		return filepath.Base(parsed.Result[0].Key), nil
+	}
+	return "", fmt.Errorf("unauthorized")
+}
+
 func (svc *StorageService) serveR2Object(w http.ResponseWriter, r *http.Request, fileID, filename string) {
 	if filename == "" {
-		http.NotFound(w, r)
-		return
+		resolved, err := svc.resolveR2Filename(r.Context(), fileID)
+		if err != nil || resolved == "" {
+			http.NotFound(w, r)
+			return
+		}
+		filename = resolved
 	}
 	key := fmt.Sprintf("concord/%s/%s", fileID, filename)
 	endpoint := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/r2/buckets/%s/objects/%s",

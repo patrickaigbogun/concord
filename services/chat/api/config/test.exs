@@ -9,10 +9,12 @@ config :concord_api, ConcordApi.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  port: 5433,
+  port: String.to_integer(System.get_env("PGPORT", "5432")),
   database: "concord_api_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
+
+config :concord_api, trust_test_user_header: true
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

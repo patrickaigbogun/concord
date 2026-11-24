@@ -34,7 +34,7 @@ defmodule ConcordApiWeb.PostController do
     ]
 
   def create(conn, %{"space_id" => space_id} = params) do
-    author_id = get_req_header(conn, "x-user-id") |> List.first() || params["author_id"]
+    author_id = conn.assigns[:current_user_id]
 
     if author_id do
       attrs = Map.merge(params, %{"space_id" => space_id, "author_id" => author_id})
@@ -62,7 +62,7 @@ defmodule ConcordApiWeb.PostController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing author_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -101,8 +101,8 @@ defmodule ConcordApiWeb.PostController do
       forbidden: {"Echo policy violation", "application/json", %OpenApiSpex.Schema{type: :object}}
     ]
 
-  def echo(conn, %{"id" => original_post_id, "destination_space_id" => destination_space_id} = params) do
-    sharing_user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+  def echo(conn, %{"id" => original_post_id, "destination_space_id" => destination_space_id}) do
+    sharing_user_id = conn.assigns[:current_user_id]
 
     if sharing_user_id do
       case Posts.echo_post(original_post_id, destination_space_id, sharing_user_id) do
@@ -127,7 +127,7 @@ defmodule ConcordApiWeb.PostController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 
@@ -157,7 +157,7 @@ defmodule ConcordApiWeb.PostController do
     ]
 
   def create_comment(conn, %{"post_id" => post_id} = params) do
-    author_id = get_req_header(conn, "x-user-id") |> List.first() || params["author_id"]
+    author_id = conn.assigns[:current_user_id]
 
     if author_id do
       attrs = Map.merge(params, %{"post_id" => post_id, "author_id" => author_id})
@@ -168,7 +168,7 @@ defmodule ConcordApiWeb.PostController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing author_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 end

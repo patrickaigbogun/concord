@@ -59,7 +59,7 @@ defmodule ConcordApiWeb.FileController do
     ]
 
   def create(conn, %{"space_id" => space_id} = params) do
-    user_id = get_req_header(conn, "x-user-id") |> List.first() || params["user_id"]
+    user_id = conn.assigns[:current_user_id]
 
     if user_id do
       attrs = Map.merge(params, %{"space_id" => space_id, "uploader_id" => user_id})
@@ -70,7 +70,7 @@ defmodule ConcordApiWeb.FileController do
           conn |> put_status(:unprocessable_entity) |> json(%{errors: Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)})
       end
     else
-      conn |> put_status(:bad_request) |> json(%{error: "Missing user_id"})
+      conn |> put_status(:unauthorized) |> json(%{error: "Authentication required"})
     end
   end
 end
