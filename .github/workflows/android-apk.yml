@@ -58,21 +58,40 @@ jobs:
       - name: Build mobile web bundle
         run: bun run build:mobile
 
-      - name: Initialize Tauri Android
-        run: bunx tauri android init --ci
-
-      - name: Build Android APK (aarch64)
-        run: bunx tauri android build --apk --target aarch64 --debug
-
-      - name: Locate & stage APK
+      - name: Initialize Tauri Android & apply Concord icons
         run: |
-          APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -n 1)
-          if [ -z "$APK_PATH" ]; then
+          bunx tauri android init --ci
+          bunx tauri icon src-tauri/icons/concord-icon-1024.png
+
+      - name: Build optimized Release Android APK (aarch64)
+        run: bunx tauri android build --apk --target aarch64
+
+      - name: Align & sign Release APK
+        run: |
+          RAW_APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$RAW_APK" ]; then
             echo "No APK found!"
             exit 1
           fi
-          echo "Found APK: $APK_PATH"
-          cp "$APK_PATH" concord-android-arm64.apk
+          echo "Found raw APK: $RAW_APK"
+          ls -lh "$RAW_APK"
+
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
+          KEYSTORE="/tmp/concord-release.keystore"
+          keytool -genkey -v -keystore "$KEYSTORE" \
+            -storepass concord2026 -keypass concord2026 \
+            -alias concord -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Concord, OU=Dexx Systems, O=Dexx Systems, L=Earth, S=Global, C=US"
+
+          "$BUILD_TOOLS/zipalign" -v -p 4 "$RAW_APK" concord-aligned.apk
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass pass:concord2026 \
+            --key-pass pass:concord2026 \
+            --ks-key-alias concord \
+            --out concord-android-arm64.apk \
+            concord-aligned.apk
+          "$BUILD_TOOLS/apksigner" verify concord-android-arm64.apk
           ls -lh concord-android-arm64.apk
 
       - name: Upload APK artifact
@@ -88,7 +107,8 @@ jobs:
         run: |
           TAG="latest-android"
           TITLE="Concord Android (Latest)"
-          NOTES="Automated Android arm64 APK build from commit ${{ github.sha }}."
+          APK_SIZE=$(du -h concord-android-arm64.apk | cut -f1)
+          NOTES="Optimized release arm64 APK (${APK_SIZE}) from commit ${{ github.sha }}."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" concord-android-arm64.apk --clobber
             gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --target "${{ github.sha }}"

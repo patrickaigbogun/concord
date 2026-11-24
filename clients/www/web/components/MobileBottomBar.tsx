@@ -30,6 +30,10 @@ export function MobileBottomBar({ className = '' }: MobileBottomBarProps) {
 	const handleHome = (e: React.MouseEvent) => {
 		e.preventDefault()
 		if (typeof window !== 'undefined') {
+			if (window.location.pathname !== '/') {
+				window.location.href = '/'
+				return
+			}
 			window.scrollTo({ top: 0, behavior: 'smooth' })
 			if (window.location.hash) {
 				window.history.pushState(null, '', window.location.pathname)
@@ -39,13 +43,8 @@ export function MobileBottomBar({ className = '' }: MobileBottomBarProps) {
 
 	const handleDownload = (e: React.MouseEvent) => {
 		e.preventDefault()
-		if (typeof document !== 'undefined') {
-			const el = document.getElementById('get-started')
-			if (el) {
-				el.scrollIntoView({ behavior: 'smooth' })
-			} else {
-				window.location.hash = '#get-started'
-			}
+		if (typeof window !== 'undefined') {
+			window.location.href = '/download'
 		}
 	}
 
@@ -141,7 +140,7 @@ export function MobileBottomBar({ className = '' }: MobileBottomBarProps) {
 				>
 					{/* Download Button */}
 					<a
-						href="#get-started"
+						href="/download"
 						onClick={handleDownload}
 						className="size-8.5 rounded-full flex items-center justify-center text-neutral-300 hover:text-white hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
 						aria-label="Download Concord"

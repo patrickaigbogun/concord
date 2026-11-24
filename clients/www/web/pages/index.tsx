@@ -33,7 +33,7 @@ export default function LandingPage() {
 						<nav className="flex items-center gap-8 text-sm sm:text-base text-neutral-300 font-semibold">
 							<a href="#features" className="hover:text-white transition-colors">Chat &amp; Posts</a>
 							<a href="#spaces" className="hover:text-white transition-colors">Spaces &amp; Realms</a>
-							<a href="#get-started" className="hover:text-white transition-colors">Download</a>
+							<a href="/download" className="hover:text-white transition-colors">Download</a>
 						</nav>
 					</LiquidLens>
 
@@ -282,7 +282,7 @@ export default function LandingPage() {
 							<div className="space-y-3">
 								<div className="text-neutral-200 text-sm font-bold uppercase tracking-wider">Product</div>
 								<ul className="space-y-2 text-neutral-300 font-semibold">
-									<li><a href="#get-started" className="hover:text-white transition-colors">Download</a></li>
+									<li><a href="/download" className="hover:text-white transition-colors">Download</a></li>
 									<li><a href="#spaces" className="hover:text-white transition-colors">Spaces</a></li>
 									<li><a href="#spaces" className="hover:text-white transition-colors">Realms</a></li>
 									<li><a href="#features" className="hover:text-white transition-colors">Dual Modes</a></li>
