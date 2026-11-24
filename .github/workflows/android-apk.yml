@@ -1,0 +1,101 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'clients/app/**'
+      - '.github/workflows/android-apk.yml'
+    tags:
+      - 'app-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK 26
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "ndk;26.1.10909125" "platforms;android-34" "build-tools;34.0.0"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Setup Rust (Android aarch64)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/app/src-tauri
+
+      - name: Install JS dependencies
+        run: bun install
+
+      - name: Build mobile web bundle
+        run: bun run build:mobile
+
+      - name: Initialize Tauri Android
+        run: bunx tauri android init --ci
+
+      - name: Build Android APK (aarch64)
+        run: bunx tauri android build --apk --target aarch64 --debug
+
+      - name: Locate & stage APK
+        run: |
+          APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found!"
+            exit 1
+          fi
+          echo "Found APK: $APK_PATH"
+          cp "$APK_PATH" concord-android-arm64.apk
+          ls -lh concord-android-arm64.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: concord-android-arm64
+          path: clients/app/concord-android-arm64.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Release (latest-android)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="latest-android"
+          TITLE="Concord Android (Latest)"
+          NOTES="Automated Android arm64 APK build from commit ${{ github.sha }}."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" concord-android-arm64.apk --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --target "${{ github.sha }}"
+          else
+            gh release create "$TAG" concord-android-arm64.apk \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --prerelease
+          fi

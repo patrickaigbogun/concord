@@ -6,8 +6,8 @@
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:7990",
-    "beforeBuildCommand": "bun run build",
-    "frontendDist": "../web/public"
+    "beforeBuildCommand": "bun run build:mobile",
+    "frontendDist": "../dist-mobile"
   },
   "app": {
     "windows": [

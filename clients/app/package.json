@@ -33,6 +33,7 @@
   "private": true,
   "scripts": {
     "build": "bun core/bootstrap/build.ts",
+    "build:mobile": "bun run build && rm -rf dist-mobile && mkdir -p dist-mobile && cp build/index.html dist-mobile/ && cp -r build/assets dist-mobile/",
     "dev": "bun core/bootstrap/dev.ts",
     "start": "NODE_ENV=production ./build/server",
     "tauri": "tauri",
