@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { completeSignIn } from '../../lib/auth'
+import { completeSignIn } from '../../../lib/auth'
 
 export const metadata = { title: 'Signing in — Concord' }
 

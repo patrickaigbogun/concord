@@ -5,7 +5,7 @@ import {
 	listenForTauriDeepLink,
 	startSignIn,
 	type ConcordSession,
-} from '../lib/auth'
+} from '../../lib/auth'
 
 export const metadata = { title: 'Concord' }
 
