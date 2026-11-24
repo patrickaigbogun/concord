@@ -9,6 +9,7 @@ interface LeftRealmsPanelProps {
 	viewMode: RoomViewMode
 	onChangeViewMode: (mode: RoomViewMode) => void
 	onSelectRealm: (realmId: string) => void
+	onCreateRealm?: () => void
 	session: ConcordSession | null
 	onSignIn: () => void
 	onSignOut: () => void
@@ -20,6 +21,7 @@ export function LeftRealmsPanel({
 	viewMode,
 	onChangeViewMode,
 	onSelectRealm,
+	onCreateRealm,
 	session,
 	onSignIn,
 	onSignOut,
@@ -48,8 +50,23 @@ export function LeftRealmsPanel({
 					<span className="text-sm font-bold tracking-tight text-zinc-100">Realms</span>
 				</div>
 
-				{/* 3 View Modes: 2-Col Titled (Default) | Visual-Only | Classic List */}
-				<div className="flex items-center rounded-lg bg-white/[0.04] border border-white/[0.06] p-0.5">
+				{/* 3 View Modes + Create Realm */}
+				<div className="flex items-center gap-1.5">
+					{onCreateRealm && (
+						<button
+							type="button"
+							title="Create Realm"
+							aria-label="Create Realm"
+							onClick={onCreateRealm}
+							className="p-1.5 rounded-lg bg-[#8b5cf6]/15 hover:bg-[#8b5cf6]/25 border border-[#8b5cf6]/30 text-[#c4b5fd] hover:text-white transition cursor-pointer"
+						>
+							<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+								<line x1="12" y1="5" x2="12" y2="19" />
+								<line x1="5" y1="12" x2="19" y2="12" />
+							</svg>
+						</button>
+					)}
+					<div className="flex items-center rounded-lg bg-white/[0.04] border border-white/[0.06] p-0.5">
 					<button
 						type="button"
 						title="2-Column Grid with Titles"
@@ -105,6 +122,7 @@ export function LeftRealmsPanel({
 							<line x1="4" y1="18" x2="20" y2="18" />
 						</svg>
 					</button>
+				</div>
 				</div>
 			</div>
 

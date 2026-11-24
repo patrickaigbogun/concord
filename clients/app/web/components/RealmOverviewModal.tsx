@@ -4,6 +4,7 @@ interface RealmOverviewModalProps {
 	realm: Realm
 	activeSpaceId: string
 	onSelectSpace: (spaceId: string) => void
+	onCreateSpace?: () => void
 	onClose: () => void
 }
 
@@ -11,6 +12,7 @@ export function RealmOverviewModal({
 	realm,
 	activeSpaceId,
 	onSelectSpace,
+	onCreateSpace,
 	onClose,
 }: RealmOverviewModalProps) {
 	const memberCount = realm.isDirect ? 2 : 18 + realm.spaces.length * 4
@@ -99,8 +101,26 @@ export function RealmOverviewModal({
 
 					{/* All Spaces in Realm */}
 					<div className="space-y-2">
-						<div className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
-							Spaces in {realm.name}
+						<div className="flex items-center justify-between gap-2">
+							<div className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+								Spaces in {realm.name}
+							</div>
+							{onCreateSpace && (
+								<button
+									type="button"
+									onClick={() => {
+										onClose()
+										onCreateSpace()
+									}}
+									className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#8b5cf6]/15 hover:bg-[#8b5cf6]/25 border border-[#8b5cf6]/30 text-[11px] font-semibold text-[#c4b5fd] hover:text-white transition cursor-pointer"
+								>
+									<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+										<line x1="12" y1="5" x2="12" y2="19" />
+										<line x1="5" y1="12" x2="19" y2="12" />
+									</svg>
+									<span>New Space</span>
+								</button>
+							)}
 						</div>
 						<div className="grid grid-cols-2 gap-2">
 							{realm.spaces.map((sp) => {

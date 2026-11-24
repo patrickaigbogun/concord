@@ -41,7 +41,12 @@ export function getSession(): ConcordSession | null {
 	try {
 		const raw = localStorage.getItem(SESSION_KEY)
 		if (!raw) return null
-		return JSON.parse(raw) as ConcordSession
+		const parsed = JSON.parse(raw) as ConcordSession
+		if (parsed?.expires_at && Date.now() >= parsed.expires_at) {
+			localStorage.removeItem(SESSION_KEY)
+			return null
+		}
+		return parsed
 	} catch {
 		return null
 	}
@@ -97,7 +102,7 @@ export async function completeSignIn(callbackUrl: string): Promise<ConcordSessio
 	const verifier = localStorage.getItem(VERIFIER_KEY)
 
 	if (!code) throw new Error('Missing authorization code')
-	if (expectedState && state !== expectedState) throw new Error('OAuth state mismatch')
+	if (!expectedState || state !== expectedState) throw new Error('OAuth state mismatch')
 
 	const body = new URLSearchParams({
 		grant_type: 'authorization_code',

@@ -1,5 +1,6 @@
 import { CONCORD_CONFIG } from './config'
 import { getSession } from './auth'
+import { safeStorageUrl } from './url'
 
 export interface UploadedAsset {
 	id: string
@@ -36,5 +37,10 @@ export async function uploadFile(file: File, spaceId?: string): Promise<Uploaded
 		throw new Error(`Upload failed (${resp.status})`)
 	}
 
-	return resp.json()
+	const data = (await resp.json()) as UploadedAsset
+	const verifiedUrl = safeStorageUrl(data?.url, false)
+	if (!verifiedUrl) {
+		throw new Error('Upload response returned an untrusted storage URL')
+	}
+	return { ...data, url: verifiedUrl }
 }

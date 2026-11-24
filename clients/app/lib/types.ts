@@ -8,6 +8,8 @@ export interface RealmNote {
 	audioTitle?: string
 	audioArtist?: string
 	audioUrl?: string
+	audioArtworkUrl?: string
+	audioExternalUrl?: string
 	updatedAt: string
 }
 
