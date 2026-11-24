@@ -35,23 +35,23 @@ export function SpaceOrbBar({
 	}
 
 	return (
-		<div className="px-4 pt-1 pb-1.5 flex flex-col items-center">
+		<div className="px-4 pt-1.5 pb-1.5 flex flex-col items-center">
 			{/* Collapsible Pill Handle (Collapsed by default so text owns the screen) */}
 			<button
 				type="button"
 				onClick={onToggleExpanded}
-				className="group flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] text-[11px] text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
+				className="group flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#16161c] hover:bg-[#1e1e26] text-[13px] text-zinc-300 hover:text-white transition cursor-pointer"
 			>
-				<span className={`w-2 h-2 rounded-full bg-gradient-to-br ${activeSpace?.orbGradient || 'from-violet-500 to-indigo-600'}`} />
-				<span className="font-medium text-zinc-200">{activeSpace?.name}</span>
+				<span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-br ${activeSpace?.orbGradient || 'from-violet-500 to-indigo-600'}`} />
+				<span className="font-semibold text-white">{activeSpace?.name}</span>
 				<span className="text-zinc-600">&bull;</span>
-				<span className="text-[10px] text-zinc-500">{visibleSpaces.length} spaces</span>
+				<span className="text-[12px] text-zinc-400">{visibleSpaces.length} spaces</span>
 				<svg
-					className={`w-3 h-3 text-zinc-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+					className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
 					viewBox="0 0 24 24"
 					fill="none"
 					stroke="currentColor"
-					strokeWidth="2.2"
+					strokeWidth="2.4"
 				>
 					<polyline points="18 15 12 9 6 15" />
 				</svg>
@@ -62,7 +62,8 @@ export function SpaceOrbBar({
 				<div
 					ref={scrollerRef}
 					onWheel={handleWheel}
-					className="w-full max-w-xl mt-2 pb-1 overflow-x-auto no-scrollbar"
+					data-no-pane-swipe="true"
+					className="w-full max-w-xl mt-2.5 pb-1 overflow-x-auto no-scrollbar"
 				>
 					<div className="flex items-end justify-center gap-3 md:gap-2.5 px-4 pt-2 pb-1 min-w-max mx-auto">
 						{visibleSpaces.map((space, idx) => {

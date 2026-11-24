@@ -39,98 +39,98 @@ export function LeftRealmsPanel({
 	}, [realms, query])
 
 	return (
-		<aside className="h-full flex flex-col bg-[#0d0d10] border-r border-white/[0.07] select-none">
-			{/* Top Bar: Concord Mark + 3-Mode View Switcher */}
+		<aside className="h-full flex flex-col bg-[#0d0d11] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+			{/* Top Bar: Concord Mark + Create + 3-Mode View Switcher */}
 			<div className="px-4 pt-4 pb-3 flex items-center justify-between gap-2">
 				<div className="flex items-center gap-2.5">
-					<svg className="w-6 h-6 text-[#8b5cf6] shrink-0" viewBox="0 0 100 100" fill="none">
+					<svg className="w-7 h-7 text-[#8b5cf6] shrink-0" viewBox="0 0 100 100" fill="none">
 						<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
 						<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
 					</svg>
-					<span className="text-sm font-bold tracking-tight text-zinc-100">Realms</span>
+					<span className="text-[18px] font-bold tracking-tight text-white">Realms</span>
 				</div>
 
-				{/* 3 View Modes + Create Realm */}
-				<div className="flex items-center gap-1.5">
+				<div className="flex items-center gap-2">
 					{onCreateRealm && (
 						<button
 							type="button"
 							title="Create Realm"
 							aria-label="Create Realm"
 							onClick={onCreateRealm}
-							className="p-1.5 rounded-lg bg-[#8b5cf6]/15 hover:bg-[#8b5cf6]/25 border border-[#8b5cf6]/30 text-[#c4b5fd] hover:text-white transition cursor-pointer"
+							className="w-8 h-8 rounded-full bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30 text-[#c4b5fd] hover:text-white flex items-center justify-center transition cursor-pointer"
 						>
-							<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
 								<line x1="12" y1="5" x2="12" y2="19" />
 								<line x1="5" y1="12" x2="19" y2="12" />
 							</svg>
 						</button>
 					)}
-					<div className="flex items-center rounded-lg bg-white/[0.04] border border-white/[0.06] p-0.5">
-					<button
-						type="button"
-						title="2-Column Grid with Titles"
-						onClick={() => onChangeViewMode('grid-titled')}
-						className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer ${
-							viewMode === 'grid-titled'
-								? 'bg-white/12 text-white'
-								: 'text-zinc-500 hover:text-zinc-300'
-						}`}
-					>
-						<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<rect x="3" y="3" width="7" height="7" rx="1.5" />
-							<rect x="14" y="3" width="7" height="7" rx="1.5" />
-							<rect x="3" y="14" width="7" height="7" rx="1.5" />
-							<rect x="14" y="14" width="7" height="7" rx="1.5" />
-						</svg>
-					</button>
-					<button
-						type="button"
-						title="Visual-Only Compact Grid"
-						onClick={() => onChangeViewMode('grid-visual')}
-						className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer ${
-							viewMode === 'grid-visual'
-								? 'bg-white/12 text-white'
-								: 'text-zinc-500 hover:text-zinc-300'
-						}`}
-					>
-						<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<rect x="3" y="3" width="4.5" height="4.5" rx="1" />
-							<rect x="9.75" y="3" width="4.5" height="4.5" rx="1" />
-							<rect x="16.5" y="3" width="4.5" height="4.5" rx="1" />
-							<rect x="3" y="9.75" width="4.5" height="4.5" rx="1" />
-							<rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1" />
-							<rect x="16.5" y="9.75" width="4.5" height="4.5" rx="1" />
-							<rect x="3" y="16.5" width="4.5" height="4.5" rx="1" />
-							<rect x="9.75" y="16.5" width="4.5" height="4.5" rx="1" />
-							<rect x="16.5" y="16.5" width="4.5" height="4.5" rx="1" />
-						</svg>
-					</button>
-					<button
-						type="button"
-						title="Classic List"
-						onClick={() => onChangeViewMode('list')}
-						className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer ${
-							viewMode === 'list'
-								? 'bg-white/12 text-white'
-								: 'text-zinc-500 hover:text-zinc-300'
-						}`}
-					>
-						<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<line x1="4" y1="6" x2="20" y2="6" />
-							<line x1="4" y1="12" x2="20" y2="12" />
-							<line x1="4" y1="18" x2="20" y2="18" />
-						</svg>
-					</button>
-				</div>
+
+					<div className="flex items-center rounded-xl bg-[#16161c] p-1 gap-0.5">
+						<button
+							type="button"
+							title="2-Column Grid"
+							onClick={() => onChangeViewMode('grid-titled')}
+							className={`p-1.5 rounded-lg transition cursor-pointer ${
+								viewMode === 'grid-titled'
+									? 'bg-white/15 text-white'
+									: 'text-zinc-500 hover:text-zinc-200'
+							}`}
+						>
+							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<rect x="3" y="3" width="7" height="7" rx="1.5" />
+								<rect x="14" y="3" width="7" height="7" rx="1.5" />
+								<rect x="3" y="14" width="7" height="7" rx="1.5" />
+								<rect x="14" y="14" width="7" height="7" rx="1.5" />
+							</svg>
+						</button>
+						<button
+							type="button"
+							title="Compact Grid"
+							onClick={() => onChangeViewMode('grid-visual')}
+							className={`p-1.5 rounded-lg transition cursor-pointer ${
+								viewMode === 'grid-visual'
+									? 'bg-white/15 text-white'
+									: 'text-zinc-500 hover:text-zinc-200'
+							}`}
+						>
+							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<rect x="3" y="3" width="4.5" height="4.5" rx="1" />
+								<rect x="9.75" y="3" width="4.5" height="4.5" rx="1" />
+								<rect x="16.5" y="3" width="4.5" height="4.5" rx="1" />
+								<rect x="3" y="9.75" width="4.5" height="4.5" rx="1" />
+								<rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1" />
+								<rect x="16.5" y="9.75" width="4.5" height="4.5" rx="1" />
+								<rect x="3" y="16.5" width="4.5" height="4.5" rx="1" />
+								<rect x="9.75" y="16.5" width="4.5" height="4.5" rx="1" />
+								<rect x="16.5" y="16.5" width="4.5" height="4.5" rx="1" />
+							</svg>
+						</button>
+						<button
+							type="button"
+							title="List View"
+							onClick={() => onChangeViewMode('list')}
+							className={`p-1.5 rounded-lg transition cursor-pointer ${
+								viewMode === 'list'
+									? 'bg-white/15 text-white'
+									: 'text-zinc-500 hover:text-zinc-200'
+							}`}
+						>
+							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<line x1="4" y1="6" x2="20" y2="6" />
+								<line x1="4" y1="12" x2="20" y2="12" />
+								<line x1="4" y1="18" x2="20" y2="18" />
+							</svg>
+						</button>
+					</div>
 				</div>
 			</div>
 
 			{/* Search Bar */}
-			<div className="px-4 pb-3">
+			<div className="px-4 pb-3.5">
 				<div className="relative">
 					<svg
-						className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+						className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -144,13 +144,13 @@ export function LeftRealmsPanel({
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search realms…"
-						className="w-full rounded-xl bg-white/[0.04] border border-white/[0.07] pl-8 pr-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-white/20 transition"
+						className="w-full rounded-2xl bg-[#16161c] pl-10 pr-4 py-2.5 text-[15px] text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/50 transition"
 					/>
 				</div>
 			</div>
 
-			{/* Realms Canvas (Visual Grid or Classic List) */}
-			<div className="flex-1 overflow-y-auto no-scrollbar px-3.5 pb-4">
+			{/* Realms Canvas: Boxes with Round Images Inside + Title Text */}
+			<div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-4">
 				{viewMode === 'grid-titled' && (
 					<div className="grid grid-cols-2 gap-3">
 						{filtered.map((realm) => {
@@ -160,41 +160,43 @@ export function LeftRealmsPanel({
 									key={realm.id}
 									type="button"
 									onClick={() => onSelectRealm(realm.id)}
-									className="group text-left focus:outline-none cursor-pointer"
+									className={`group relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 text-center transition-all duration-200 cursor-pointer focus:outline-none ${
+										active
+											? 'bg-[#1d1830] ring-2 ring-[#8b5cf6]'
+											: 'bg-[#15151b] hover:bg-[#1b1b23]'
+									}`}
 								>
-									<div
-										className={`relative aspect-square w-full rounded-2xl overflow-hidden border transition-all duration-200 ${
-											active
-												? 'border-[#8b5cf6] ring-2 ring-[#8b5cf6]/35 scale-[0.98]'
-												: 'border-white/[0.08] group-hover:border-white/20'
-										}`}
-									>
+									{realm.unreadCount ? (
+										<span className="absolute top-2.5 right-2.5 min-w-5 h-5 px-1.5 rounded-full bg-[#8b5cf6] text-[11px] font-bold text-white flex items-center justify-center">
+											{realm.unreadCount}
+										</span>
+									) : null}
+
+									<div className="relative">
 										<img
 											src={realm.coverUrl}
 											alt={realm.name}
-											className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+											className="w-16 h-16 rounded-full object-cover transition-transform duration-200 group-hover:scale-105"
 										/>
-										<div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-
-										{realm.unreadCount ? (
-											<span className="absolute top-2 right-2 min-w-5 h-5 px-1.5 rounded-full bg-[#8b5cf6] text-[10px] font-bold text-white flex items-center justify-center shadow">
-												{realm.unreadCount}
-											</span>
-										) : null}
-
 										{realm.note ? (
 											<span
 												title={`Note: ${realm.note.text}`}
-												className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-black/60"
+												className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-[#15151b]"
 											/>
 										) : null}
 									</div>
-									<div
-										className={`mt-1.5 px-0.5 text-xs font-medium truncate transition ${
-											active ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'
-										}`}
-									>
-										{realm.name}
+
+									<div className="w-full space-y-0.5">
+										<div
+											className={`text-[14px] font-semibold truncate transition ${
+												active ? 'text-white' : 'text-zinc-200 group-hover:text-white'
+											}`}
+										>
+											{realm.name}
+										</div>
+										<div className="text-[12px] text-zinc-500 truncate">
+											{realm.isDirect ? 'Direct' : `${realm.spaces.length} spaces`}
+										</div>
 									</div>
 								</button>
 							)
@@ -203,7 +205,7 @@ export function LeftRealmsPanel({
 				)}
 
 				{viewMode === 'grid-visual' && (
-					<div className="grid grid-cols-3 gap-2">
+					<div className="grid grid-cols-3 gap-2.5">
 						{filtered.map((realm) => {
 							const active = realm.id === activeRealmId
 							return (
@@ -212,15 +214,19 @@ export function LeftRealmsPanel({
 									type="button"
 									title={realm.name}
 									onClick={() => onSelectRealm(realm.id)}
-									className={`relative aspect-square w-full rounded-xl overflow-hidden border transition-all cursor-pointer ${
+									className={`relative aspect-square rounded-2xl p-2 flex items-center justify-center transition-all cursor-pointer ${
 										active
-											? 'border-[#8b5cf6] ring-2 ring-[#8b5cf6]/40 scale-[0.96]'
-											: 'border-white/[0.08] hover:border-white/25'
+											? 'bg-[#1d1830] ring-2 ring-[#8b5cf6]'
+											: 'bg-[#15151b] hover:bg-[#1b1b23]'
 									}`}
 								>
-									<img src={realm.coverUrl} alt={realm.name} className="w-full h-full object-cover" />
+									<img
+										src={realm.coverUrl}
+										alt={realm.name}
+										className="w-12 h-12 rounded-full object-cover"
+									/>
 									{realm.unreadCount ? (
-										<span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#8b5cf6] ring-2 ring-black/70" />
+										<span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
 									) : null}
 								</button>
 							)
@@ -229,7 +235,7 @@ export function LeftRealmsPanel({
 				)}
 
 				{viewMode === 'list' && (
-					<div className="space-y-1">
+					<div className="space-y-1.5">
 						{filtered.map((realm) => {
 							const active = realm.id === activeRealmId
 							return (
@@ -237,25 +243,25 @@ export function LeftRealmsPanel({
 									key={realm.id}
 									type="button"
 									onClick={() => onSelectRealm(realm.id)}
-									className={`w-full flex items-center gap-3 p-2 rounded-xl transition cursor-pointer text-left ${
+									className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl transition cursor-pointer text-left ${
 										active
-											? 'bg-white/[0.08] text-white'
-											: 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200'
+											? 'bg-[#1d1830] text-white'
+											: 'bg-transparent hover:bg-[#16161c] text-zinc-300'
 									}`}
 								>
 									<img
 										src={realm.coverUrl}
 										alt={realm.name}
-										className="w-10 h-10 rounded-xl object-cover shrink-0 border border-white/10"
+										className="w-11 h-11 rounded-full object-cover shrink-0"
 									/>
 									<div className="min-w-0 flex-1">
-										<div className="text-xs font-semibold truncate">{realm.name}</div>
-										<div className="text-[11px] text-zinc-500 truncate">
+										<div className="text-[15px] font-semibold truncate text-white">{realm.name}</div>
+										<div className="text-[13px] text-zinc-400 truncate">
 											{realm.isDirect ? 'Direct' : `${realm.spaces.length} spaces`}
 										</div>
 									</div>
 									{realm.unreadCount ? (
-										<span className="min-w-5 h-5 px-1.5 rounded-full bg-[#8b5cf6] text-[10px] font-bold text-white flex items-center justify-center">
+										<span className="min-w-6 h-6 px-2 rounded-full bg-[#8b5cf6] text-[12px] font-bold text-white flex items-center justify-center">
 											{realm.unreadCount}
 										</span>
 									) : null}
@@ -267,37 +273,37 @@ export function LeftRealmsPanel({
 			</div>
 
 			{/* Footer: Concord ID Profile */}
-			<div className="p-3 border-t border-white/[0.07] bg-[#0a0a0d]">
+			<div className="px-4 py-3.5 bg-[#0a0a0e]">
 				{session ? (
-					<div className="flex items-center justify-between gap-2">
+					<div className="flex items-center justify-between gap-3">
 						<a
 							href={`${CONCORD_CONFIG.idUrl}/profile`}
 							target="_blank"
 							rel="noreferrer"
-							className="flex items-center gap-2.5 min-w-0 group"
+							className="flex items-center gap-3 min-w-0 group"
 						>
 							{session.user.avatar_url ? (
 								<img
 									src={session.user.avatar_url}
 									alt={session.user.display_name}
-									className="w-8 h-8 rounded-full object-cover border border-white/10"
+									className="w-10 h-10 rounded-full object-cover shrink-0"
 								/>
 							) : (
-								<div className="w-8 h-8 rounded-full bg-[#8b5cf6] flex items-center justify-center text-xs font-bold text-white">
+								<div className="w-10 h-10 rounded-full bg-[#8b5cf6] flex items-center justify-center text-[15px] font-bold text-white shrink-0">
 									{session.user.display_name?.[0] || session.user.username?.[0]}
 								</div>
 							)}
 							<div className="min-w-0">
-								<div className="text-xs font-semibold text-zinc-100 truncate group-hover:text-white">
+								<div className="text-[14px] font-semibold text-white truncate">
 									{session.user.display_name}
 								</div>
-								<div className="text-[10px] text-zinc-500 truncate">@{session.user.username}</div>
+								<div className="text-[12px] text-zinc-400 truncate">@{session.user.username}</div>
 							</div>
 						</a>
 						<button
 							type="button"
 							onClick={onSignOut}
-							className="text-[11px] text-zinc-500 hover:text-zinc-200 px-2 py-1 rounded-lg hover:bg-white/[0.05] transition cursor-pointer"
+							className="text-[13px] font-medium text-zinc-400 hover:text-white px-3 py-1.5 rounded-xl bg-[#16161c] hover:bg-[#202028] transition cursor-pointer"
 						>
 							Out
 						</button>
@@ -306,7 +312,7 @@ export function LeftRealmsPanel({
 					<button
 						type="button"
 						onClick={onSignIn}
-						className="w-full py-2 px-3 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-semibold transition cursor-pointer"
+						className="w-full py-3 px-4 rounded-2xl bg-white text-black hover:bg-zinc-200 text-[14px] font-bold transition cursor-pointer"
 					>
 						Sign in with Concord ID
 					</button>
