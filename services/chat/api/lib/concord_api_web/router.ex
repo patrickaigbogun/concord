@@ -7,6 +7,10 @@ defmodule ConcordApiWeb.Router do
     plug OpenApiSpex.Plug.PutApiSpec, module: ConcordApiWeb.ApiSpec
   end
 
+  scope "/" do
+    get "/health", ConcordApiWeb.HealthController, :index
+  end
+
   scope "/api" do
     pipe_through :api
 
