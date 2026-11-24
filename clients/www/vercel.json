@@ -2,12 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "bun install && (cd ../app && bun install)",
-  "buildCommand": "bun run build",
+  "buildCommand": "bun run build && rm -f build/server && mkdir -p build/app build/download build/auth/callback && cp build/index.html build/app/index.html && cp build/index.html build/download/index.html && cp build/index.html build/auth/callback/index.html",
   "outputDirectory": "build",
-  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon\\.).*)",
       "destination": "/index.html"
     }
   ]
