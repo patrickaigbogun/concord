@@ -31,23 +31,19 @@ import { ConcordSocket, type SocketConnectionState } from '../../lib/socket'
 import { isUuid, safeMediaUrl } from '../../lib/url'
 import type { ChatMessage, FileAsset, Realm, RealmNote, RoomViewMode, Space } from '../../lib/types'
 import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
-import {
-	CreateRealmModal,
-	CreateSpaceModal,
-	SpacePersonaModal,
-} from '../components/CreateModals'
+import { CreateRealmModal, CreateSpaceModal } from '../components/CreateModals'
 import { LeftRealmsPanel } from '../components/LeftRealmsPanel'
 import { RealmNoteBar } from '../components/RealmNoteBar'
 import { RealmNoteModal } from '../components/RealmNoteModal'
-import { RealmOverviewModal } from '../components/RealmOverviewModal'
 import { RightSpacePanel } from '../components/RightSpacePanel'
+import { SpaceDetailsDrawer, type SpacePersonaState } from '../components/SpaceDetailsDrawer'
 import { SpaceOrbBar } from '../components/SpaceOrbBar'
 import { StickerGifTray } from '../components/StickerGifTray'
 
 export const metadata = { title: 'Concord' }
 
 const VIEW_MODE_KEY = 'concord_rooms_view_mode'
-const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏']
+const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏', '😂']
 
 const ORB_GRADIENTS = [
 	'from-violet-500 to-indigo-600',
@@ -212,9 +208,6 @@ function shouldIgnorePaneSwipe(target: EventTarget | null, boundary: HTMLElement
 	return false
 }
 
-/**
- * Pronounced comic-book speech bubble tail SVG pointing toward the speaker.
- */
 function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: string }) {
 	if (side === 'left') {
 		return (
@@ -224,10 +217,7 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 				fill="none"
 				aria-hidden="true"
 			>
-				<path
-					d="M14 0C14 7.5 8 13.5 0.5 15C4.5 11.2 6.5 7 6.5 0H14Z"
-					fill={color}
-				/>
+				<path d="M14 0C14 7.5 8 13.5 0.5 15C4.5 11.2 6.5 7 6.5 0H14Z" fill={color} />
 			</svg>
 		)
 	}
@@ -238,10 +228,7 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 			fill="none"
 			aria-hidden="true"
 		>
-			<path
-				d="M0 0C0 7.5 6 13.5 13.5 15C9.5 11.2 7.5 7 7.5 0H0Z"
-				fill={color}
-			/>
+			<path d="M0 0C0 7.5 6 13.5 13.5 15C9.5 11.2 7.5 7 7.5 0H0Z" fill={color} />
 		</svg>
 	)
 }
@@ -255,9 +242,7 @@ export default function ConcordAppPage() {
 
 	const [messagesBySpace, setMessagesBySpace] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES)
 	const [filesBySpace, setFilesBySpace] = useState<Record<string, FileAsset[]>>(INITIAL_FILES)
-	const [personasBySpace, setPersonasBySpace] = useState<
-		Record<string, { tag?: string; display_name?: string; is_anonymous: boolean }>
-	>({})
+	const [personasBySpace, setPersonasBySpace] = useState<Record<string, SpacePersonaState>>({})
 
 	// Device gallery items persisted across tray opens in this session
 	const [deviceGallery, setDeviceGallery] = useState<DeviceGalleryItem[]>([])
@@ -267,22 +252,28 @@ export default function ConcordAppPage() {
 	const [replyPulse, setReplyPulse] = useState(false)
 	const [orbBarExpanded, setOrbBarExpanded] = useState(false)
 	const [openTray, setOpenTray] = useState<'none' | 'media' | 'stickers'>('none')
-	const [realmOverviewOpen, setRealmOverviewOpen] = useState(false)
+	const [spaceDrawerOpen, setSpaceDrawerOpen] = useState(false)
 
 	// Action modals
 	const [createRealmOpen, setCreateRealmOpen] = useState(false)
 	const [createSpaceOpen, setCreateSpaceOpen] = useState(false)
-	const [personaModalOpen, setPersonaModalOpen] = useState(false)
 	const [noteModalOpen, setNoteModalOpen] = useState(false)
 
-	// Long-press / double-tap message interactions
-	const [activeActionMsgId, setActiveActionMsgId] = useState<string | null>(null)
-	const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
+	// Long-press context menu, selection mode, kept/checked/forward states
+	const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null)
+	const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null)
+	const [selectionMode, setSelectionMode] = useState(false)
+	const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(() => new Set())
+	const [keptMsgIds, setKeptMsgIds] = useState<Set<string>>(() => new Set())
+	const [checkedMsgIds, setCheckedMsgIds] = useState<Set<string>>(() => new Set())
+	const [toastMsg, setToastMsg] = useState<string | null>(null)
+
 	const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const longPressOriginRef = useRef<{ x: number; y: number } | null>(null)
 	const longPressTriggeredRef = useRef(false)
 	const lastTapRef = useRef<{ msgId: string; time: number } | null>(null)
 	const replyPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const composerInputRef = useRef<HTMLInputElement>(null)
 
 	// Realtime socket state
@@ -298,7 +289,18 @@ export default function ConcordAppPage() {
 	const activeSpace = activeRealm.spaces.find((s) => s.id === activeSpaceId) || activeRealm.spaces[0]
 	const messages = messagesBySpace[activeSpace.id] || []
 	const spaceFiles = filesBySpace[activeSpace.id] || []
-	const activePersona = personasBySpace[activeSpace.id]
+	const activePersona: SpacePersonaState = personasBySpace[activeSpace.id] || {
+		title: session?.user.display_name || 'You',
+		mood: '',
+		tag: session?.user.username || '',
+		is_anonymous: false,
+	}
+
+	const showToast = (msg: string) => {
+		setToastMsg(msg)
+		if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+		toastTimerRef.current = setTimeout(() => setToastMsg(null), 1800)
+	}
 
 	useEffect(() => {
 		setSession(getSession())
@@ -463,7 +465,9 @@ export default function ConcordAppPage() {
 	}, [messages.length, activeSpace.id])
 
 	useEffect(() => {
-		setActiveActionMsgId(null)
+		setContextMsg(null)
+		setSelectionMode(false)
+		setSelectedMsgIds(new Set())
 		setReplyTo(null)
 		setOpenTray('none')
 	}, [activeSpace.id])
@@ -472,20 +476,19 @@ export default function ConcordAppPage() {
 		return () => {
 			if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
 			if (replyPulseTimerRef.current) clearTimeout(replyPulseTimerRef.current)
+			if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
 		}
 	}, [])
 
-	// Proper reply trigger: haptic + highlight input + synchronously raise mobile keyboard
 	const triggerReply = (msg: ChatMessage) => {
 		hapticReply()
 		setReplyTo(msg)
-		setActiveActionMsgId(null)
+		setContextMsg(null)
 		setOpenTray('none')
 		setOrbBarExpanded(false)
 		setReplyPulse(true)
 		if (replyPulseTimerRef.current) clearTimeout(replyPulseTimerRef.current)
 		replyPulseTimerRef.current = setTimeout(() => setReplyPulse(false), 700)
-		// Synchronously focus inside the user gesture so Android/iOS opens the soft keyboard
 		composerInputRef.current?.focus()
 	}
 
@@ -502,22 +505,21 @@ export default function ConcordAppPage() {
 		setMobilePane('center')
 	}
 
-	const sendTextContent = async (rawText: string) => {
+	const sendTextContent = async (rawText: string, targetSpaceId = activeSpace.id) => {
 		const text = rawText.trim()
 		if (!text) return
 
 		hapticTap()
 		const tempId = newTempId()
-		const currentReply = replyTo
-		const targetSpaceId = activeSpace.id
+		const currentReply = targetSpaceId === activeSpace.id ? replyTo : null
 		const newMsg: ChatMessage = {
 			id: tempId,
 			spaceId: targetSpaceId,
 			authorId: session?.user.id || 'self',
-			authorName: activePersona?.is_anonymous
+			authorName: activePersona.is_anonymous
 				? 'Anonymous'
-				: activePersona?.display_name || session?.user.display_name || 'You',
-			authorHandle: activePersona?.tag || session?.user.username || 'galediç',
+				: activePersona.title || session?.user.display_name || 'You',
+			authorHandle: activePersona.tag || session?.user.username || 'galediç',
 			authorAvatar: session?.user.avatar_url,
 			isSelf: true,
 			content: text,
@@ -535,8 +537,10 @@ export default function ConcordAppPage() {
 			...prev,
 			[targetSpaceId]: [...(prev[targetSpaceId] || []), newMsg],
 		}))
-		setDraft('')
-		setReplyTo(null)
+		if (targetSpaceId === activeSpace.id) {
+			setDraft('')
+			setReplyTo(null)
+		}
 
 		if (session?.access_token && isLiveId(targetSpaceId)) {
 			try {
@@ -553,7 +557,7 @@ export default function ConcordAppPage() {
 					return { ...prev, [targetSpaceId]: next }
 				})
 			} catch {
-				// Keep optimistic message visible
+				// Keep optimistic message
 			}
 		}
 	}
@@ -583,8 +587,8 @@ export default function ConcordAppPage() {
 			id: tempId,
 			spaceId: targetSpaceId,
 			authorId: session?.user.id || 'self',
-			authorName: activePersona?.display_name || session?.user.display_name || 'You',
-			authorHandle: activePersona?.tag || session?.user.username || 'galediç',
+			authorName: activePersona.title || session?.user.display_name || 'You',
+			authorHandle: activePersona.tag || session?.user.username || 'galediç',
 			isSelf: true,
 			content,
 			attachment: asset,
@@ -645,7 +649,7 @@ export default function ConcordAppPage() {
 				return { ...m, reactions: list }
 			}),
 		}))
-		setActiveActionMsgId(null)
+		setContextMsg(null)
 
 		if (session?.access_token && isLiveId(msgId)) {
 			try {
@@ -662,12 +666,62 @@ export default function ConcordAppPage() {
 		hapticTap()
 		try {
 			await navigator.clipboard.writeText(msg.content)
-			setCopiedMsgId(msg.id)
-			setTimeout(() => setCopiedMsgId((curr) => (curr === msg.id ? null : curr)), 1500)
+			showToast('Copied text')
 		} catch {
-			// Clipboard unavailable
+			showToast('Could not copy')
 		}
-		setActiveActionMsgId(null)
+		setContextMsg(null)
+	}
+
+	const handleDeleteMessages = (ids: string[]) => {
+		hapticTap()
+		const idSet = new Set(ids)
+		setMessagesBySpace((prev) => ({
+			...prev,
+			[activeSpace.id]: (prev[activeSpace.id] || []).filter((m) => !idSet.has(m.id)),
+		}))
+		setContextMsg(null)
+		setSelectionMode(false)
+		setSelectedMsgIds(new Set())
+		showToast(ids.length > 1 ? `Deleted ${ids.length} messages` : 'Message deleted')
+	}
+
+	const toggleSelectMsg = (id: string) => {
+		hapticTap()
+		setSelectedMsgIds((prev) => {
+			const next = new Set(prev)
+			if (next.has(id)) next.delete(id)
+			else next.add(id)
+			if (next.size === 0) setSelectionMode(false)
+			return next
+		})
+	}
+
+	const toggleKeptMsg = (id: string) => {
+		hapticTap()
+		setKeptMsgIds((prev) => {
+			const next = new Set(prev)
+			if (next.has(id)) {
+				next.delete(id)
+				showToast('Removed from Kept')
+			} else {
+				next.add(id)
+				showToast('Message kept')
+			}
+			return next
+		})
+		setContextMsg(null)
+	}
+
+	const toggleCheckedMsg = (id: string) => {
+		hapticTap()
+		setCheckedMsgIds((prev) => {
+			const next = new Set(prev)
+			if (next.has(id)) next.delete(id)
+			else next.add(id)
+			return next
+		})
+		setContextMsg(null)
 	}
 
 	const handleSaveRealmNote = (note: RealmNote) => {
@@ -675,8 +729,9 @@ export default function ConcordAppPage() {
 		setNoteModalOpen(false)
 	}
 
-	// Touch handlers for controlled long-press menu + fast mobile double-tap reply
-	const onMessageTouchStart = (msgId: string, e: React.TouchEvent) => {
+	// Touch handlers: long-press vibration + context menu, double-tap instant reply
+	const onMessageTouchStart = (msg: ChatMessage, e: React.TouchEvent) => {
+		if (selectionMode) return
 		const t = e.touches[0]
 		longPressOriginRef.current = { x: t.clientX, y: t.clientY }
 		longPressTriggeredRef.current = false
@@ -684,7 +739,7 @@ export default function ConcordAppPage() {
 		longPressTimerRef.current = setTimeout(() => {
 			longPressTriggeredRef.current = true
 			hapticMenu()
-			setActiveActionMsgId(msgId)
+			setContextMsg(msg)
 		}, 420)
 	}
 
@@ -704,6 +759,10 @@ export default function ConcordAppPage() {
 		if (longPressTimerRef.current) {
 			clearTimeout(longPressTimerRef.current)
 			longPressTimerRef.current = null
+		}
+		if (selectionMode) {
+			toggleSelectMsg(msg.id)
+			return
 		}
 		const origin = longPressOriginRef.current
 		longPressOriginRef.current = null
@@ -764,7 +823,7 @@ export default function ConcordAppPage() {
 			}}
 			className="h-[100dvh] w-full overflow-hidden bg-[#0a0a0e] text-zinc-100 flex relative select-none"
 		>
-			{/* LEFT PANEL: Visual Realms Grid (Boxes with Round Images + Title) */}
+			{/* LEFT PANEL: Visual Realms Grid */}
 			<div
 				className={`fixed inset-y-0 left-0 z-30 w-[84vw] max-w-[320px] lg:static lg:w-[292px] lg:translate-x-0 transition-transform duration-300 ease-out ${
 					mobilePane === 'left' ? 'translate-x-0 shadow-2xl shadow-black' : '-translate-x-full'
@@ -792,7 +851,6 @@ export default function ConcordAppPage() {
 				/>
 			</div>
 
-			{/* Mobile Backdrop when Left Drawer is open */}
 			{mobilePane === 'left' && (
 				<button
 					type="button"
@@ -803,80 +861,111 @@ export default function ConcordAppPage() {
 			)}
 
 			{/* CENTER STAGE: Active Space Conversation */}
-			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#0a0a0e]">
-				{/* Clean Top Bar */}
-				<header className="px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-2.5 flex items-center justify-between gap-3 shrink-0 bg-[#0e0e13]">
-					<div className="flex items-center gap-3 min-w-0">
+			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#0a0a0e] relative">
+				{/* iMessage-Style Centered Top Bar: Space Orb + Pill Name Underneath */}
+				{selectionMode ? (
+					<header className="px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between gap-3 shrink-0 bg-[#14141c]">
 						<button
 							type="button"
-							onClick={() => setMobilePane('left')}
-							className="lg:hidden p-2 -ml-1 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer"
-							aria-label="Open Realms"
+							onClick={() => {
+								setSelectionMode(false)
+								setSelectedMsgIds(new Set())
+							}}
+							className="text-[14px] font-semibold text-zinc-300 hover:text-white cursor-pointer"
 						>
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-								<rect x="3" y="3" width="7" height="7" rx="1.5" />
-								<rect x="14" y="3" width="7" height="7" rx="1.5" />
-								<rect x="3" y="14" width="7" height="7" rx="1.5" />
-								<rect x="14" y="14" width="7" height="7" rx="1.5" />
-							</svg>
+							Cancel
 						</button>
-
+						<span className="text-[15px] font-bold text-white">
+							{selectedMsgIds.size} selected
+						</span>
 						<button
 							type="button"
-							onClick={() => setRealmOverviewOpen(true)}
-							className="flex items-center gap-3 min-w-0 text-left group cursor-pointer focus:outline-none"
-							title="View Realm details & stats"
+							onClick={() => handleDeleteMessages(Array.from(selectedMsgIds))}
+							className="text-[14px] font-semibold text-red-400 hover:text-red-300 cursor-pointer"
 						>
-							<img
-								src={activeRealm.coverUrl}
-								alt={activeRealm.name}
-								className="w-10 h-10 rounded-full object-cover shrink-0"
-							/>
-							<div className="min-w-0">
-								<div className="flex items-center gap-1.5">
-									<span className="text-[17px] font-bold text-white truncate group-hover:text-[#c4b5fd] transition">
-										{activeSpace.name}
-									</span>
-									{socketState === 'connected' && (
-										<span
-											title="Realtime connected"
-											className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"
-										/>
-									)}
+							Delete
+						</button>
+					</header>
+				) : (
+					<header className="px-4 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 flex items-center justify-between gap-2 shrink-0 bg-[#0d0d12]">
+						{/* Left: Realms Drawer Button (mobile) */}
+						<div className="w-10 flex items-center justify-start shrink-0">
+							<button
+								type="button"
+								onClick={() => {
+									hapticTap()
+									setMobilePane('left')
+								}}
+								className="lg:hidden w-10 h-10 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
+								aria-label="Open Realms"
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+									<rect x="3" y="3" width="7" height="7" rx="1.5" />
+									<rect x="14" y="3" width="7" height="7" rx="1.5" />
+									<rect x="3" y="14" width="7" height="7" rx="1.5" />
+									<rect x="14" y="14" width="7" height="7" rx="1.5" />
+								</svg>
+							</button>
+						</div>
+
+						{/* Center: Single Focal Component — Space Orb + Pill Name Underneath (iMessage Style) */}
+						<button
+							type="button"
+							onClick={() => {
+								hapticTap()
+								setSpaceDrawerOpen(true)
+							}}
+							className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none min-w-0"
+							title="Space details & persona"
+						>
+							<div className="relative">
+								<div
+									className={`w-11 h-11 rounded-full bg-gradient-to-br ${activeSpace.orbGradient} flex items-center justify-center text-[15px] font-bold text-white shadow-md group-hover:scale-105 transition`}
+								>
+									{activeSpace.name[0]}
 								</div>
-								<p className="text-[13px] text-zinc-400 truncate">{activeRealm.name}</p>
+								{socketState === 'connected' && (
+									<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0d0d12]" />
+								)}
+							</div>
+							<div className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#181822] group-hover:bg-[#222230] transition max-w-[200px]">
+								<span className="text-[13px] font-semibold text-white truncate">
+									{activeSpace.name}
+								</span>
+								<svg
+									className="w-3 h-3 text-zinc-400 shrink-0"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2.4"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<polyline points="9 18 15 12 9 6" />
+								</svg>
 							</div>
 						</button>
-					</div>
 
-					<div className="flex items-center gap-2 shrink-0">
-						<button
-							type="button"
-							onClick={() => setPersonaModalOpen(true)}
-							title="Contextual Space Persona"
-							className="px-3 py-1.5 rounded-xl bg-[#181820] hover:bg-[#22222d] text-[13px] font-semibold text-zinc-200 hover:text-white transition cursor-pointer"
-						>
-							{activePersona?.is_anonymous
-								? 'Anon'
-								: activePersona?.tag
-									? `@${activePersona.tag}`
-									: 'Persona'}
-						</button>
-
-						<button
-							type="button"
-							onClick={() => setMobilePane((p) => (p === 'right' ? 'center' : 'right'))}
-							className="lg:hidden p-2 rounded-xl bg-[#181820] text-zinc-200 hover:text-white cursor-pointer"
-							aria-label="Open Space media and files"
-						>
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-								<rect x="3" y="3" width="18" height="18" rx="3" />
-								<circle cx="8.5" cy="8.5" r="1.5" />
-								<path d="M21 15l-5-5L5 21" />
-							</svg>
-						</button>
-					</div>
-				</header>
+						{/* Right: Space Media Hub Button (mobile) */}
+						<div className="w-10 flex items-center justify-end shrink-0">
+							<button
+								type="button"
+								onClick={() => {
+									hapticTap()
+									setMobilePane((p) => (p === 'right' ? 'center' : 'right'))
+								}}
+								className="lg:hidden w-10 h-10 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
+								aria-label="Open Space media and files"
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<rect x="3" y="3" width="18" height="18" rx="3" />
+									<circle cx="8.5" cy="8.5" r="1.5" />
+									<path d="M21 15l-5-5L5 21" />
+								</svg>
+							</button>
+						</div>
+					</header>
+				)}
 
 				{/* Curator's Realm Note Bar */}
 				<RealmNoteBar
@@ -884,11 +973,15 @@ export default function ConcordAppPage() {
 					onEditNote={() => setNoteModalOpen(true)}
 				/>
 
-				{/* Conversation Stream: Comic Speech Bubbles Coming From Sender Avatar, Name Underneath */}
-				<div
-					onClick={() => activeActionMsgId && setActiveActionMsgId(null)}
-					className="flex-1 overflow-y-auto px-3.5 md:px-8 py-4"
-				>
+				{/* Toast Feedback */}
+				{toastMsg && (
+					<div className="pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-white text-black text-[13px] font-bold shadow-xl">
+						{toastMsg}
+					</div>
+				)}
+
+				{/* Conversation Stream */}
+				<div className="flex-1 overflow-y-auto px-3.5 md:px-8 py-4">
 					<div className="max-w-2xl mx-auto flex flex-col">
 						{messages.length === 0 ? (
 							<div className="text-center py-20 space-y-2">
@@ -903,14 +996,22 @@ export default function ConcordAppPage() {
 								const next = idx < messages.length - 1 ? messages[idx + 1] : null
 								const sameAuthorAsPrev = Boolean(prev && prev.authorId === msg.authorId && prev.isSelf === msg.isSelf)
 								const isLastInGroup = !next || next.authorId !== msg.authorId || next.isSelf !== msg.isSelf
-								const actionsOpen = activeActionMsgId === msg.id
 								const avatarUrl = safeMediaUrl(msg.authorAvatar)
+								const isSelected = selectedMsgIds.has(msg.id)
+								const isKept = keptMsgIds.has(msg.id)
+								const isChecked = checkedMsgIds.has(msg.id)
 
 								return (
 									<div
 										key={msg.id}
-										onDoubleClick={() => triggerReply(msg)}
-										onTouchStart={(e) => onMessageTouchStart(msg.id, e)}
+										onDoubleClick={() => !selectionMode && triggerReply(msg)}
+										onContextMenu={(e) => {
+											e.preventDefault()
+											hapticMenu()
+											setContextMsg(msg)
+										}}
+										onClick={() => selectionMode && toggleSelectMsg(msg.id)}
+										onTouchStart={(e) => onMessageTouchStart(msg, e)}
 										onTouchMove={onMessageTouchMove}
 										onTouchEnd={(e) => onMessageTouchEnd(msg, e)}
 										onTouchCancel={() => {
@@ -919,57 +1020,33 @@ export default function ConcordAppPage() {
 												longPressTimerRef.current = null
 											}
 										}}
-										className={`group relative flex flex-col ${
-											msg.isSelf ? 'items-end' : 'items-start'
-										} ${idx === 0 ? '' : sameAuthorAsPrev ? 'mt-1.5' : 'mt-4'}`}
+										className={`group relative flex flex-col rounded-2xl transition-colors ${
+											isSelected ? 'bg-[#8b5cf6]/15 px-2 py-1' : ''
+										} ${msg.isSelf ? 'items-end' : 'items-start'} ${
+											idx === 0 ? '' : sameAuthorAsPrev ? 'mt-1.5' : 'mt-4'
+										}`}
 									>
-										{/* Floating Overlay Action Bar */}
-										<div
-											onClick={(e) => e.stopPropagation()}
-											className={`absolute -top-10 z-20 ${
-												msg.isSelf ? 'right-0' : 'left-11'
-											} flex items-center gap-1 px-2 py-1 rounded-full bg-[#1a1a24] shadow-xl shadow-black/70 transition-opacity ${
-												actionsOpen
-													? 'opacity-100 pointer-events-auto'
-													: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
-											}`}
-										>
-											{QUICK_REACTIONS.map((emoji) => (
-												<button
-													key={emoji}
-													type="button"
-													onClick={() => handleToggleReaction(msg.id, emoji)}
-													className="w-7 h-7 rounded-full hover:bg-white/10 text-[15px] flex items-center justify-center transition cursor-pointer"
-													title={`React with ${emoji}`}
-												>
-													{emoji}
-												</button>
-											))}
-											<button
-												type="button"
-												onClick={() => triggerReply(msg)}
-												className="px-2.5 py-1 rounded-full hover:bg-white/10 text-[13px] font-semibold text-zinc-200 hover:text-white transition cursor-pointer"
-											>
-												Reply
-											</button>
-											{msg.content && (
-												<button
-													type="button"
-													onClick={() => handleCopyMessage(msg)}
-													className="px-2.5 py-1 rounded-full hover:bg-white/10 text-[13px] font-semibold text-zinc-200 hover:text-white transition cursor-pointer"
-												>
-													{copiedMsgId === msg.id ? 'Copied' : 'Copy'}
-												</button>
-											)}
-										</div>
-
-										{/* Row: Avatar + Expressive Comic Speech Bubble */}
 										<div
 											className={`flex items-end gap-3 max-w-[92%] md:max-w-[80%] ${
 												msg.isSelf ? 'flex-row-reverse pr-2.5' : 'flex-row'
 											}`}
 										>
-											{/* Incoming Sender Avatar (aligned at bottom so bubble points right from their image!) */}
+											{selectionMode && (
+												<span
+													className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mb-2 ${
+														isSelected
+															? 'bg-[#8b5cf6] border-[#8b5cf6] text-white'
+															: 'border-zinc-500'
+													}`}
+												>
+													{isSelected && (
+														<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+															<polyline points="20 6 9 17 4 12" />
+														</svg>
+													)}
+												</span>
+											)}
+
 											{!msg.isSelf && (
 												<div className="w-9 h-9 shrink-0 mb-0.5">
 													{isLastInGroup ? (
@@ -988,7 +1065,7 @@ export default function ConcordAppPage() {
 												</div>
 											)}
 
-											{/* Comic Speech Bubble with Pronounced Tail */}
+											{/* Comic Speech Bubble */}
 											<div
 												className={`relative rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.45] ${
 													msg.isSelf
@@ -1053,17 +1130,30 @@ export default function ConcordAppPage() {
 											</div>
 										</div>
 
-										{/* Sender Name & Time Underneath Bubble + Reactions */}
-										{isLastInGroup && (
+										{/* Sender Name, Timestamp, Kept & Checked Indicators Underneath Bubble */}
+										{(isLastInGroup || isKept || isChecked) && (
 											<div
 												className={`flex items-center gap-2 mt-1 ${
 													msg.isSelf ? 'pr-3 justify-end' : 'pl-12 justify-start'
 												}`}
 											>
-												{!msg.isSelf && (
+												{!msg.isSelf && isLastInGroup && (
 													<span className="text-[12px] font-semibold text-zinc-400">{msg.authorName}</span>
 												)}
-												<span className="text-[11px] text-zinc-500">{msg.createdAt}</span>
+												{isLastInGroup && (
+													<span className="text-[11px] text-zinc-500">{msg.createdAt}</span>
+												)}
+												{isKept && (
+													<span className="text-[11px] font-semibold text-[#c4b5fd]">Kept</span>
+												)}
+												{isChecked && (
+													<span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-400">
+														<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+															<polyline points="20 6 9 17 4 12" />
+														</svg>
+														Checked
+													</span>
+												)}
 											</div>
 										)}
 
@@ -1073,7 +1163,10 @@ export default function ConcordAppPage() {
 													<button
 														key={r.emoji}
 														type="button"
-														onClick={() => handleToggleReaction(msg.id, r.emoji)}
+														onClick={(e) => {
+															e.stopPropagation()
+															void handleToggleReaction(msg.id, r.emoji)
+														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
 																? 'bg-[#8b5cf6]/30 text-white'
@@ -1093,7 +1186,7 @@ export default function ConcordAppPage() {
 					</div>
 				</div>
 
-				{/* Collapsible Space Orb Bar */}
+				{/* Collapsible Space Orb Bar (True Symmetric Upward Arch) */}
 				<SpaceOrbBar
 					spaces={activeRealm.spaces}
 					activeSpaceId={activeSpace.id}
@@ -1122,7 +1215,7 @@ export default function ConcordAppPage() {
 					</div>
 				)}
 
-				{/* Message Composer (min-w-0 ensures Send button NEVER clips off screen!) */}
+				{/* Message Composer */}
 				<form
 					onSubmit={handleSendMessage}
 					className={`px-3 pt-2.5 bg-[#0e0e13] shrink-0 ${
@@ -1130,7 +1223,6 @@ export default function ConcordAppPage() {
 					}`}
 				>
 					<div className="max-w-2xl mx-auto flex items-center gap-2 w-full">
-						{/* Media Drawer Button */}
 						<button
 							type="button"
 							title="Device gallery, files, camera, and voice"
@@ -1151,7 +1243,6 @@ export default function ConcordAppPage() {
 							</svg>
 						</button>
 
-						{/* Text Input + Direct Stickers & GIFs Toggle (min-w-0 prevents overflow!) */}
 						<div
 							className={`flex-1 min-w-0 flex items-center rounded-full bg-[#181820] pl-4 pr-1.5 py-1 transition-shadow ${
 								replyPulse || replyTo ? 'ring-2 ring-[#8b5cf6]' : ''
@@ -1192,7 +1283,6 @@ export default function ConcordAppPage() {
 							</button>
 						</div>
 
-						{/* Crisp Circular Send Button (always visible on screen!) */}
 						<button
 							type="submit"
 							disabled={!draft.trim()}
@@ -1246,14 +1336,230 @@ export default function ConcordAppPage() {
 				/>
 			</div>
 
-			{/* REALM OVERVIEW & STATS SHEET */}
-			{realmOverviewOpen && (
-				<RealmOverviewModal
+			{/* LONG-PRESS MESSAGE CONTEXT MENU (Reply, Copy text, Select message, Forward, Delete, Keep, Check) */}
+			{contextMsg && (
+				<div
+					data-no-pane-swipe="true"
+					onClick={() => setContextMsg(null)}
+					className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="w-full max-w-sm space-y-2.5"
+					>
+						{/* Quick Reactions Strip */}
+						<div className="flex items-center justify-around px-3 py-2 rounded-full bg-[#171720] shadow-xl">
+							{QUICK_REACTIONS.map((emoji) => (
+								<button
+									key={emoji}
+									type="button"
+									onClick={() => void handleToggleReaction(contextMsg.id, emoji)}
+									className="w-10 h-10 rounded-full hover:bg-white/10 active:scale-110 text-xl flex items-center justify-center transition cursor-pointer"
+								>
+									{emoji}
+								</button>
+							))}
+						</div>
+
+						{/* Message Preview Snippet */}
+						{contextMsg.content && (
+							<div className="px-4 py-2.5 rounded-2xl bg-[#14141c] text-[14px] text-zinc-300 line-clamp-2">
+								{contextMsg.content}
+							</div>
+						)}
+
+						{/* Context Menu Actions */}
+						<div className="rounded-3xl bg-[#171720] overflow-hidden divide-y divide-white/[0.06] shadow-2xl">
+							<button
+								type="button"
+								onClick={() => triggerReply(contextMsg)}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+							>
+								<span>Reply</span>
+								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<polyline points="9 17 4 12 9 7" />
+									<path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+								</svg>
+							</button>
+
+							{contextMsg.content && (
+								<button
+									type="button"
+									onClick={() => void handleCopyMessage(contextMsg)}
+									className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								>
+									<span>Copy text</span>
+									<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+										<rect x="9" y="9" width="13" height="13" rx="2" />
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+									</svg>
+								</button>
+							)}
+
+							<button
+								type="button"
+								onClick={() => {
+									hapticTap()
+									setSelectionMode(true)
+									setSelectedMsgIds(new Set([contextMsg.id]))
+									setContextMsg(null)
+								}}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+							>
+								<span>Select message</span>
+								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<circle cx="12" cy="12" r="9" />
+									<polyline points="9 12 11 14 15 10" />
+								</svg>
+							</button>
+
+							<button
+								type="button"
+								onClick={() => {
+									hapticTap()
+									setForwardMsg(contextMsg)
+									setContextMsg(null)
+								}}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+							>
+								<span>Forward</span>
+								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<polyline points="15 17 20 12 15 7" />
+									<path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+								</svg>
+							</button>
+
+							<button
+								type="button"
+								onClick={() => toggleKeptMsg(contextMsg.id)}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+							>
+								<span>{keptMsgIds.has(contextMsg.id) ? 'Unkeep' : 'Keep'}</span>
+								<svg className="w-4 h-4 text-[#c4b5fd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+								</svg>
+							</button>
+
+							<button
+								type="button"
+								onClick={() => toggleCheckedMsg(contextMsg.id)}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+							>
+								<span>{checkedMsgIds.has(contextMsg.id) ? 'Uncheck' : 'Check'}</span>
+								<svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+									<polyline points="20 6 9 17 4 12" />
+								</svg>
+							</button>
+
+							<button
+								type="button"
+								onClick={() => handleDeleteMessages([contextMsg.id])}
+								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
+							>
+								<span>Delete</span>
+								<svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<polyline points="3 6 5 6 21 6" />
+									<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+								</svg>
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* FORWARD TO SPACE SHEET */}
+			{forwardMsg && (
+				<div
+					data-no-pane-swipe="true"
+					onClick={() => setForwardMsg(null)}
+					className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="w-full max-w-sm rounded-3xl bg-[#15151d] p-5 space-y-4"
+					>
+						<div className="flex items-center justify-between">
+							<h3 className="text-[17px] font-bold text-white">Forward to Space</h3>
+							<button
+								type="button"
+								onClick={() => setForwardMsg(null)}
+								className="text-[14px] text-zinc-400 hover:text-white cursor-pointer"
+							>
+								Close
+							</button>
+						</div>
+						<div className="space-y-1.5 max-h-64 overflow-y-auto no-scrollbar">
+							{activeRealm.spaces.map((sp) => (
+								<button
+									key={sp.id}
+									type="button"
+									onClick={() => {
+										void sendTextContent(forwardMsg.content || forwardMsg.attachment?.filename || '', sp.id)
+										setForwardMsg(null)
+										showToast(`Forwarded to ${sp.name}`)
+									}}
+									className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[#1c1c26] hover:bg-[#252533] text-left cursor-pointer"
+								>
+									<span className={`w-9 h-9 rounded-full bg-gradient-to-br ${sp.orbGradient} flex items-center justify-center text-[13px] font-bold text-white shrink-0`}>
+										{sp.name[0]}
+									</span>
+									<span className="text-[15px] font-semibold text-white truncate">{sp.name}</span>
+								</button>
+							))}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* SPACE DETAILS + PERSONA DRAWER (Opened by tapping top centered Space Orb + Pill) */}
+			{spaceDrawerOpen && (
+				<SpaceDetailsDrawer
 					realm={activeRealm}
-					activeSpaceId={activeSpace.id}
+					space={activeSpace}
+					role="curator"
+					persona={activePersona}
+					defaultTitle={session?.user.display_name || 'Concord Member'}
 					onSelectSpace={(id) => setActiveSpaceId(id)}
 					onCreateSpace={() => setCreateSpaceOpen(true)}
-					onClose={() => setRealmOverviewOpen(false)}
+					onUpdateSpace={({ name, description }) => {
+						setRealms((prev) =>
+							prev.map((r) =>
+								r.id === activeRealm.id
+									? {
+											...r,
+											spaces: r.spaces.map((s) =>
+												s.id === activeSpace.id ? { ...s, name, description } : s
+											),
+										}
+									: r
+							)
+						)
+						showToast('Space updated')
+					}}
+					onSavePersona={async (nextPersona) => {
+						if (session?.access_token && isLiveId(activeSpace.id)) {
+							const payload = {
+								tag: nextPersona.tag || undefined,
+								display_name: nextPersona.title || undefined,
+								is_anonymous: nextPersona.is_anonymous,
+							}
+							try {
+								await updateSpaceIdentity(activeSpace.id, payload)
+							} catch (err) {
+								if (err instanceof ApiError && err.status === 404) {
+									await joinSpace(activeSpace.id)
+									await updateSpaceIdentity(activeSpace.id, payload)
+								} else {
+									throw err
+								}
+							}
+						}
+						setPersonasBySpace((prev) => ({
+							...prev,
+							[activeSpace.id]: nextPersona,
+						}))
+					}}
+					onClose={() => setSpaceDrawerOpen(false)}
 				/>
 			)}
 
@@ -1329,37 +1635,6 @@ export default function ConcordAppPage() {
 							)
 						)
 						setActiveSpaceId(newSpace.id)
-					}}
-				/>
-			)}
-
-			{/* CONTEXTUAL SPACE PERSONA MODAL */}
-			{personaModalOpen && (
-				<SpacePersonaModal
-					spaceId={activeSpace.id}
-					spaceName={activeSpace.name}
-					initialTag={activePersona?.tag || session?.user.username || ''}
-					initialDisplayName={activePersona?.display_name || session?.user.display_name || ''}
-					initialIsAnonymous={activePersona?.is_anonymous || false}
-					defaultDisplayName={session?.user.display_name || 'Concord Member'}
-					onClose={() => setPersonaModalOpen(false)}
-					onSubmit={async (params) => {
-						if (session?.access_token && isLiveId(activeSpace.id)) {
-							try {
-								await updateSpaceIdentity(activeSpace.id, params)
-							} catch (err) {
-								if (err instanceof ApiError && err.status === 404) {
-									await joinSpace(activeSpace.id)
-									await updateSpaceIdentity(activeSpace.id, params)
-								} else {
-									throw err
-								}
-							}
-						}
-						setPersonasBySpace((prev) => ({
-							...prev,
-							[activeSpace.id]: params,
-						}))
 					}}
 				/>
 			)}
