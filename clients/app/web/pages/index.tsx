@@ -1334,7 +1334,6 @@ export default function ConcordAppPage() {
 				<RightSpacePanel
 					space={activeSpace}
 					files={spaceFiles}
-					onCloseMobile={() => setMobilePane('center')}
 				/>
 			</div>
 

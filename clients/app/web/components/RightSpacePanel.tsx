@@ -5,7 +5,6 @@ import type { FileAsset, Space } from '../../lib/types'
 interface RightSpacePanelProps {
 	space: Space
 	files: FileAsset[]
-	onCloseMobile?: () => void
 }
 
 type HubTab = 'media' | 'docs' | 'links'
@@ -149,6 +148,47 @@ function isMarkdownDoc(doc: FileAsset): boolean {
 	return doc.contentType === 'text/markdown' || /\.(md|markdown)$/i.test(doc.filename)
 }
 
+/**
+ * Human-friendly file format label (never raw MIME types like "text/markdown").
+ */
+function friendlyFormatLabel(doc: FileAsset): string {
+	const name = doc.filename.toLowerCase()
+	const ct = (doc.contentType || '').toLowerCase()
+
+	if (ct === 'application/pdf' || name.endsWith('.pdf')) return 'PDF Document'
+	if (ct === 'text/markdown' || name.endsWith('.md') || name.endsWith('.markdown')) return 'Markdown'
+	if (name.endsWith('.ts') || name.endsWith('.tsx') || ct.includes('typescript')) return 'TypeScript'
+	if (name.endsWith('.js') || name.endsWith('.jsx') || ct.includes('javascript')) return 'JavaScript'
+	if (name.endsWith('.json') || ct === 'application/json') return 'JSON'
+	if (name.endsWith('.py')) return 'Python'
+	if (name.endsWith('.go')) return 'Go'
+	if (name.endsWith('.rs')) return 'Rust'
+	if (name.endsWith('.ex') || name.endsWith('.exs')) return 'Elixir'
+	if (name.endsWith('.csv') || ct === 'text/csv') return 'CSV Spreadsheet'
+	if (name.endsWith('.doc') || name.endsWith('.docx')) return 'Word Document'
+	if (name.endsWith('.txt') || ct === 'text/plain') return 'Plain Text'
+	if (name.endsWith('.html') || name.endsWith('.css')) return 'Web File'
+	return 'Document'
+}
+
+function shortFormatBadge(doc: FileAsset): string {
+	const name = doc.filename.toLowerCase()
+	if (isPdfDoc(doc)) return 'PDF'
+	if (isMarkdownDoc(doc)) return 'MD'
+	if (name.endsWith('.ts') || name.endsWith('.tsx')) return 'TS'
+	if (name.endsWith('.js') || name.endsWith('.jsx')) return 'JS'
+	if (name.endsWith('.json')) return 'JSON'
+	if (name.endsWith('.doc') || name.endsWith('.docx')) return 'Word'
+	if (name.endsWith('.txt')) return 'Text'
+	return 'File'
+}
+
+function formatFileSize(bytes: number): string {
+	if (!bytes || bytes < 1024) return `${bytes || 0} B`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function formatCodeContent(doc: FileAsset): string {
 	const raw = doc.previewText || 'Preview available when opened directly from Concord R2.'
 	if (doc.contentType === 'application/json' || /\.json$/i.test(doc.filename)) {
@@ -179,7 +219,7 @@ function CodeViewer({ doc }: { doc: FileAsset }) {
 	return (
 		<div className="space-y-2.5" data-no-pane-swipe="true">
 			<div className="flex items-center justify-between gap-2">
-				<span className="text-[12px] text-zinc-400 font-mono">{lines.length} lines</span>
+				<span className="text-[12px] text-zinc-400">{lines.length} lines</span>
 				<button
 					type="button"
 					onClick={handleCopy}
@@ -205,13 +245,73 @@ function CodeViewer({ doc }: { doc: FileAsset }) {
 	)
 }
 
-export function RightSpacePanel({
-	space,
-	files,
-	onCloseMobile,
-}: RightSpacePanelProps) {
+function PdfViewer({ doc, onExpand }: { doc: FileAsset; onExpand: () => void }) {
+	const verifiedUrl = safeStorageUrl(doc.url, true)
+	const [useCompatViewer, setUseCompatViewer] = useState(() => {
+		if (typeof navigator === 'undefined') return false
+		return /android/i.test(navigator.userAgent)
+	})
+
+	if (!verifiedUrl) {
+		return (
+			<div className="rounded-xl bg-white/[0.04] p-4 text-[14px] text-zinc-400">
+				PDF preview is enabled for verified Concord R2 files and local uploads.
+			</div>
+		)
+	}
+
+	const isRemoteHttps = verifiedUrl.startsWith('https://')
+	const frameSrc =
+		useCompatViewer && isRemoteHttps
+			? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(verifiedUrl)}`
+			: `${verifiedUrl}#toolbar=1&view=FitH`
+
+	return (
+		<div className="space-y-3" data-no-pane-swipe="true">
+			<div className="relative rounded-2xl overflow-hidden bg-white">
+				<iframe
+					src={frameSrc}
+					title={doc.filename}
+					sandbox="allow-scripts allow-same-origin"
+					referrerPolicy="no-referrer"
+					className="w-full h-[420px]"
+				/>
+			</div>
+
+			<div className="flex flex-wrap items-center gap-2">
+				<button
+					type="button"
+					onClick={onExpand}
+					className="flex-1 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-[13px] font-bold transition cursor-pointer"
+				>
+					Full Screen
+				</button>
+				<a
+					href={verifiedUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-white transition"
+				>
+					Open
+				</a>
+				{isRemoteHttps && (
+					<button
+						type="button"
+						onClick={() => setUseCompatViewer((v) => !v)}
+						className="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/12 text-[12px] font-medium text-zinc-300 transition cursor-pointer"
+					>
+						{useCompatViewer ? 'Native' : 'Mobile Mode'}
+					</button>
+				)}
+			</div>
+		</div>
+	)
+}
+
+export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 	const [tab, setTab] = useState<HubTab>('media')
 	const [openDoc, setOpenDoc] = useState<FileAsset | null>(null)
+	const [fullscreenPdf, setFullscreenPdf] = useState<FileAsset | null>(null)
 	const [lightboxImage, setLightboxImage] = useState<FileAsset | null>(null)
 
 	const media = files.filter((f) => f.kind === 'image' || f.kind === 'video' || f.kind === 'audio')
@@ -220,55 +320,47 @@ export function RightSpacePanel({
 
 	useEffect(() => {
 		setOpenDoc(null)
+		setFullscreenPdf(null)
 		setLightboxImage(null)
 	}, [space.id])
 
 	useEffect(() => {
-		if (!lightboxImage) return
+		if (!lightboxImage && !fullscreenPdf) return
 		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setLightboxImage(null)
+			if (e.key === 'Escape') {
+				setLightboxImage(null)
+				setFullscreenPdf(null)
+			}
 		}
 		window.addEventListener('keydown', onKeyDown)
 		return () => window.removeEventListener('keydown', onKeyDown)
-	}, [lightboxImage])
+	}, [lightboxImage, fullscreenPdf])
+
+	const fullscreenPdfUrl = fullscreenPdf ? safeStorageUrl(fullscreenPdf.url, true) : null
 
 	return (
 		<aside className="h-full flex flex-col bg-[#0d0d11] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-			{/* Space Header */}
-			<div className="px-4 pt-4 pb-3 flex items-center justify-between gap-2">
-				<div className="flex items-center gap-3 min-w-0">
-					<div
-						className={`w-10 h-10 rounded-full bg-gradient-to-br ${space.orbGradient} shrink-0 flex items-center justify-center text-[15px] font-bold text-white`}
-					>
-						{space.name[0]}
-					</div>
-					<div className="min-w-0">
-						<h2 className="text-[17px] font-bold text-white truncate">{space.name}</h2>
-						<p className="text-[13px] text-zinc-400 truncate">{space.description || 'Shared in Space'}</p>
-					</div>
+			{/* Space Header (No wasted Back button — swipe to close) */}
+			<div className="px-4 pt-4 pb-3 flex items-center gap-3">
+				<div
+					className={`w-10 h-10 rounded-full bg-gradient-to-br ${space.orbGradient} shrink-0 flex items-center justify-center text-[15px] font-bold text-white`}
+				>
+					{space.name[0]}
 				</div>
-				{onCloseMobile && (
-					<button
-						type="button"
-						onClick={onCloseMobile}
-						className="lg:hidden inline-flex items-center gap-1 text-[14px] font-medium text-zinc-300 hover:text-white px-3 py-1.5 rounded-xl bg-[#16161c] cursor-pointer shrink-0"
-					>
-						<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-							<path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
-						</svg>
-						<span>Back</span>
-					</button>
-				)}
+				<div className="min-w-0">
+					<h2 className="text-[18px] font-bold text-white truncate font-heading">{space.name}</h2>
+					<p className="text-[13px] text-zinc-400 truncate">{space.description || 'Shared in Space'}</p>
+				</div>
 			</div>
 
-			{/* 3 Clean Space Hub Tabs: Media | Docs | Links */}
-			<div className="px-4 pb-3">
+			{/* 3 Clean Tabs: Media | Docs | Links (No item counts in tab labels!) */}
+			<div className="px-4 pb-3.5">
 				<div className="grid grid-cols-3 gap-1 bg-[#16161c] p-1 rounded-2xl">
 					{(
 						[
-							['media', `Media (${media.length})`],
-							['docs', `Docs (${docs.length})`],
-							['links', `Links (${links.length})`],
+							['media', 'Media'],
+							['docs', 'Docs'],
+							['links', 'Links'],
 						] as [HubTab, string][]
 					).map(([key, label]) => (
 						<button
@@ -278,7 +370,7 @@ export function RightSpacePanel({
 								setTab(key)
 								setOpenDoc(null)
 							}}
-							className={`py-2 rounded-xl text-[13px] font-semibold transition cursor-pointer ${
+							className={`py-2 rounded-xl text-[14px] font-semibold transition cursor-pointer ${
 								tab === key ? 'bg-white/14 text-white' : 'text-zinc-400 hover:text-zinc-200'
 							}`}
 						>
@@ -296,7 +388,7 @@ export function RightSpacePanel({
 							<button
 								type="button"
 								onClick={() => setOpenDoc(null)}
-								className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#a78bfa] hover:text-[#c4b5fd] cursor-pointer"
+								className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#c4b5fd] hover:text-white cursor-pointer"
 							>
 								<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 									<path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
@@ -308,7 +400,7 @@ export function RightSpacePanel({
 									href={safeMediaUrl(openDoc.url) ?? undefined}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-[13px] font-medium text-zinc-400 hover:text-white"
+									className="text-[13px] font-semibold text-zinc-400 hover:text-white"
 								>
 									Open
 								</a>
@@ -316,36 +408,14 @@ export function RightSpacePanel({
 						</div>
 
 						<div className="rounded-2xl bg-[#15151b] p-4 space-y-3">
-							<div className="text-[15px] font-semibold text-white truncate">{openDoc.filename}</div>
-							<div className="text-[12px] text-zinc-400">
-								{openDoc.contentType} &bull; {(openDoc.sizeBytes / 1024).toFixed(1)} KB
+							<div className="text-[16px] font-semibold text-white truncate">{openDoc.filename}</div>
+							<div className="text-[13px] text-zinc-400">
+								{friendlyFormatLabel(openDoc)} &bull; {formatFileSize(openDoc.sizeBytes)}
 							</div>
 
 							{isPdfDoc(openDoc) ? (
-								<div className="pt-2 space-y-3">
-									{safeStorageUrl(openDoc.url, true) ? (
-										<>
-											<iframe
-												src={safeStorageUrl(openDoc.url, true) ?? undefined}
-												title={openDoc.filename}
-												sandbox="allow-scripts allow-same-origin"
-												referrerPolicy="no-referrer"
-												className="w-full h-[420px] rounded-xl bg-white"
-											/>
-											<a
-												href={safeStorageUrl(openDoc.url, true) ?? undefined}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-[14px] font-semibold text-white transition"
-											>
-												Open PDF in new tab
-											</a>
-										</>
-									) : (
-										<div className="rounded-xl bg-white/[0.04] p-4 text-[14px] text-zinc-400">
-											PDF preview is enabled for verified Concord R2 files.
-										</div>
-									)}
+								<div className="pt-2">
+									<PdfViewer doc={openDoc} onExpand={() => setFullscreenPdf(openDoc)} />
 								</div>
 							) : isMarkdownDoc(openDoc) ? (
 								<div className="pt-2">
@@ -381,7 +451,7 @@ export function RightSpacePanel({
 												>
 													<div className="flex items-center justify-between gap-2 text-[13px]">
 														<span className="font-semibold text-white truncate">{item.filename}</span>
-														<span className="text-[12px] text-[#a78bfa] shrink-0">Audio</span>
+														<span className="text-[12px] text-[#c4b5fd] shrink-0">Audio</span>
 													</div>
 													<audio src={safeUrl} controls preload="metadata" className="w-full h-9" />
 												</div>
@@ -414,7 +484,11 @@ export function RightSpacePanel({
 												onClick={() => setLightboxImage(item)}
 												className="aspect-square rounded-2xl overflow-hidden block cursor-pointer"
 											>
-												<img src={safeUrl} alt={item.filename} className="w-full h-full object-cover hover:scale-105 transition duration-200" />
+												<img
+													src={safeUrl}
+													alt={item.filename}
+													className="w-full h-full object-cover hover:scale-105 transition duration-200"
+												/>
 											</button>
 										)
 									})
@@ -437,11 +511,11 @@ export function RightSpacePanel({
 											<div className="min-w-0">
 												<div className="text-[15px] font-semibold text-white truncate">{doc.filename}</div>
 												<div className="text-[13px] text-zinc-400 mt-0.5">
-													{(doc.sizeBytes / 1024).toFixed(1)} KB &bull; {doc.createdAt}
+													{friendlyFormatLabel(doc)} &bull; {formatFileSize(doc.sizeBytes)}
 												</div>
 											</div>
 											<span className="text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 shrink-0">
-												{isPdfDoc(doc) ? 'PDF' : isMarkdownDoc(doc) ? 'MD' : 'Doc'}
+												{shortFormatBadge(doc)}
 											</span>
 										</button>
 									))
@@ -477,6 +551,55 @@ export function RightSpacePanel({
 				)}
 			</div>
 
+			{/* Full-Screen PDF Reader Modal */}
+			{fullscreenPdf && fullscreenPdfUrl && (
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label={fullscreenPdf.filename}
+					data-no-pane-swipe="true"
+					className="fixed inset-0 z-50 bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+				>
+					<div className="px-4 py-3 bg-[#101015] flex items-center justify-between gap-3">
+						<div className="min-w-0">
+							<div className="text-[15px] font-semibold text-white truncate">{fullscreenPdf.filename}</div>
+							<div className="text-[12px] text-zinc-400">
+								PDF Document &bull; {formatFileSize(fullscreenPdf.sizeBytes)}
+							</div>
+						</div>
+						<div className="flex items-center gap-2 shrink-0">
+							<a
+								href={fullscreenPdfUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[13px] font-semibold text-white"
+							>
+								Open
+							</a>
+							<button
+								type="button"
+								onClick={() => setFullscreenPdf(null)}
+								className="px-3.5 py-2 rounded-xl bg-white text-black text-[13px] font-bold cursor-pointer"
+							>
+								Close
+							</button>
+						</div>
+					</div>
+					<iframe
+						src={
+							/android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') &&
+							fullscreenPdfUrl.startsWith('https://')
+								? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fullscreenPdfUrl)}`
+								: `${fullscreenPdfUrl}#toolbar=1&view=FitH`
+						}
+						title={fullscreenPdf.filename}
+						sandbox="allow-scripts allow-same-origin"
+						referrerPolicy="no-referrer"
+						className="flex-1 w-full bg-white"
+					/>
+				</div>
+			)}
+
 			{/* Full-Screen Media Lightbox Modal */}
 			{lightboxImage && safeMediaUrl(lightboxImage.url) && (
 				<div
@@ -493,7 +616,7 @@ export function RightSpacePanel({
 						<div className="min-w-0">
 							<div className="text-[15px] font-semibold text-white truncate">{lightboxImage.filename}</div>
 							<div className="text-[13px] text-zinc-400">
-								{(lightboxImage.sizeBytes / 1024).toFixed(1)} KB &bull; {lightboxImage.createdAt}
+								{formatFileSize(lightboxImage.sizeBytes)} &bull; {lightboxImage.createdAt}
 							</div>
 						</div>
 						<div className="flex items-center gap-2 shrink-0">
