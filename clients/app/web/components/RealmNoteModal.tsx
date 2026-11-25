@@ -415,7 +415,7 @@ export function RealmNoteModal({
 				{/* Header */}
 				<div className="px-5 py-4 border-b border-white/[0.07] flex items-center justify-between gap-3 shrink-0">
 					<div>
-						<div className="text-[10px] uppercase tracking-widest text-[#c4b5fd] font-semibold">
+						<div className="text-[10px] text-[#c4b5fd] font-semibold">
 							Curator Note
 						</div>
 						<h2 className="text-base font-bold text-white tracking-tight mt-0.5">
@@ -442,7 +442,7 @@ export function RealmNoteModal({
 						<div className="flex items-center justify-between">
 							<label
 								htmlFor="realm-note-text"
-								className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400"
+								className="text-[11px] font-semibold text-zinc-400"
 							>
 								Realm Note
 							</label>
@@ -729,7 +729,7 @@ export function RealmNoteModal({
 								{selectedAudio && (selectedAudio.source === 'upload' || selectedAudio.source === 'local') && (
 									<div className="grid grid-cols-2 gap-2.5">
 										<div>
-											<label className="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+											<label className="block text-[10px] text-zinc-500 mb-1">
 												Track Title
 											</label>
 											<input
@@ -744,7 +744,7 @@ export function RealmNoteModal({
 											/>
 										</div>
 										<div>
-											<label className="block text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+											<label className="block text-[10px] text-zinc-500 mb-1">
 												Artist / Credit
 											</label>
 											<input

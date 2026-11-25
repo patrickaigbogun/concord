@@ -26,10 +26,11 @@ import {
 	type ConcordSession,
 } from '../../lib/auth'
 import { INITIAL_FILES, INITIAL_MESSAGES, INITIAL_REALMS } from '../../lib/demo'
+import { hapticMenu, hapticReply, hapticTap } from '../../lib/haptics'
 import { ConcordSocket, type SocketConnectionState } from '../../lib/socket'
 import { isUuid, safeMediaUrl } from '../../lib/url'
 import type { ChatMessage, FileAsset, Realm, RealmNote, RoomViewMode, Space } from '../../lib/types'
-import { AttachmentTray } from '../components/AttachmentTray'
+import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
 import {
 	CreateRealmModal,
 	CreateSpaceModal,
@@ -192,10 +193,6 @@ function newTempId(): string {
 	return `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-/**
- * Checks whether a touch target is inside a horizontally scrollable area or interactive control
- * so swiping to scroll horizontally NEVER hijacks and opens the left/right sidebars.
- */
 function shouldIgnorePaneSwipe(target: EventTarget | null, boundary: HTMLElement | null): boolean {
 	let node = target as HTMLElement | null
 	while (node && node !== boundary) {
@@ -215,6 +212,40 @@ function shouldIgnorePaneSwipe(target: EventTarget | null, boundary: HTMLElement
 	return false
 }
 
+/**
+ * Pronounced comic-book speech bubble tail SVG pointing toward the speaker.
+ */
+function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: string }) {
+	if (side === 'left') {
+		return (
+			<svg
+				className="absolute -left-[10px] bottom-[3px] w-[14px] h-[16px] pointer-events-none"
+				viewBox="0 0 14 16"
+				fill="none"
+				aria-hidden="true"
+			>
+				<path
+					d="M14 0C14 7.5 8 13.5 0.5 15C4.5 11.2 6.5 7 6.5 0H14Z"
+					fill={color}
+				/>
+			</svg>
+		)
+	}
+	return (
+		<svg
+			className="absolute -right-[10px] bottom-[3px] w-[14px] h-[16px] pointer-events-none"
+			viewBox="0 0 14 16"
+			fill="none"
+			aria-hidden="true"
+		>
+			<path
+				d="M0 0C0 7.5 6 13.5 13.5 15C9.5 11.2 7.5 7 7.5 0H0Z"
+				fill={color}
+			/>
+		</svg>
+	)
+}
+
 export default function ConcordAppPage() {
 	const [session, setSession] = useState<ConcordSession | null>(null)
 	const [viewMode, setViewMode] = useState<RoomViewMode>('grid-titled')
@@ -228,8 +259,12 @@ export default function ConcordAppPage() {
 		Record<string, { tag?: string; display_name?: string; is_anonymous: boolean }>
 	>({})
 
+	// Device gallery items persisted across tray opens in this session
+	const [deviceGallery, setDeviceGallery] = useState<DeviceGalleryItem[]>([])
+
 	const [draft, setDraft] = useState('')
 	const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
+	const [replyPulse, setReplyPulse] = useState(false)
 	const [orbBarExpanded, setOrbBarExpanded] = useState(false)
 	const [openTray, setOpenTray] = useState<'none' | 'media' | 'stickers'>('none')
 	const [realmOverviewOpen, setRealmOverviewOpen] = useState(false)
@@ -240,11 +275,15 @@ export default function ConcordAppPage() {
 	const [personaModalOpen, setPersonaModalOpen] = useState(false)
 	const [noteModalOpen, setNoteModalOpen] = useState(false)
 
-	// Long-press / hover message action menu
+	// Long-press / double-tap message interactions
 	const [activeActionMsgId, setActiveActionMsgId] = useState<string | null>(null)
 	const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
 	const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const longPressOriginRef = useRef<{ x: number; y: number } | null>(null)
+	const longPressTriggeredRef = useRef(false)
+	const lastTapRef = useRef<{ msgId: string; time: number } | null>(null)
+	const replyPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const composerInputRef = useRef<HTMLInputElement>(null)
 
 	// Realtime socket state
 	const socketRef = useRef<ConcordSocket | null>(null)
@@ -432,8 +471,23 @@ export default function ConcordAppPage() {
 	useEffect(() => {
 		return () => {
 			if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
+			if (replyPulseTimerRef.current) clearTimeout(replyPulseTimerRef.current)
 		}
 	}, [])
+
+	// Proper reply trigger: haptic + highlight input + synchronously raise mobile keyboard
+	const triggerReply = (msg: ChatMessage) => {
+		hapticReply()
+		setReplyTo(msg)
+		setActiveActionMsgId(null)
+		setOpenTray('none')
+		setOrbBarExpanded(false)
+		setReplyPulse(true)
+		if (replyPulseTimerRef.current) clearTimeout(replyPulseTimerRef.current)
+		replyPulseTimerRef.current = setTimeout(() => setReplyPulse(false), 700)
+		// Synchronously focus inside the user gesture so Android/iOS opens the soft keyboard
+		composerInputRef.current?.focus()
+	}
 
 	const handleChangeViewMode = (mode: RoomViewMode) => {
 		setViewMode(mode)
@@ -452,6 +506,7 @@ export default function ConcordAppPage() {
 		const text = rawText.trim()
 		if (!text) return
 
+		hapticTap()
 		const tempId = newTempId()
 		const currentReply = replyTo
 		const targetSpaceId = activeSpace.id
@@ -566,6 +621,7 @@ export default function ConcordAppPage() {
 	}
 
 	const handleToggleReaction = async (msgId: string, emoji: string) => {
+		hapticTap()
 		const targetMsg = (messagesBySpace[activeSpace.id] || []).find((m) => m.id === msgId)
 		const wasReacted = Boolean(targetMsg?.reactions?.find((r) => r.emoji === emoji)?.reacted)
 
@@ -603,6 +659,7 @@ export default function ConcordAppPage() {
 
 	const handleCopyMessage = async (msg: ChatMessage) => {
 		if (!msg.content) return
+		hapticTap()
 		try {
 			await navigator.clipboard.writeText(msg.content)
 			setCopiedMsgId(msg.id)
@@ -618,13 +675,17 @@ export default function ConcordAppPage() {
 		setNoteModalOpen(false)
 	}
 
+	// Touch handlers for controlled long-press menu + fast mobile double-tap reply
 	const onMessageTouchStart = (msgId: string, e: React.TouchEvent) => {
 		const t = e.touches[0]
 		longPressOriginRef.current = { x: t.clientX, y: t.clientY }
+		longPressTriggeredRef.current = false
 		if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
 		longPressTimerRef.current = setTimeout(() => {
+			longPressTriggeredRef.current = true
+			hapticMenu()
 			setActiveActionMsgId(msgId)
-		}, 450)
+		}, 420)
 	}
 
 	const onMessageTouchMove = (e: React.TouchEvent) => {
@@ -639,15 +700,30 @@ export default function ConcordAppPage() {
 		}
 	}
 
-	const onMessageTouchEnd = () => {
+	const onMessageTouchEnd = (msg: ChatMessage, e: React.TouchEvent) => {
 		if (longPressTimerRef.current) {
 			clearTimeout(longPressTimerRef.current)
 			longPressTimerRef.current = null
 		}
+		const origin = longPressOriginRef.current
 		longPressOriginRef.current = null
+		if (longPressTriggeredRef.current || !origin) return
+
+		const t = e.changedTouches[0]
+		const moved = Math.abs(t.clientX - origin.x) > 12 || Math.abs(t.clientY - origin.y) > 12
+		if (moved) return
+
+		const now = Date.now()
+		const prev = lastTapRef.current
+		if (prev && prev.msgId === msg.id && now - prev.time < 320) {
+			lastTapRef.current = null
+			e.preventDefault()
+			triggerReply(msg)
+		} else {
+			lastTapRef.current = { msgId: msg.id, time: now }
+		}
 	}
 
-	// Smart horizontal swipe: ignores horizontally scrollable areas & inputs
 	const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
 		if (shouldIgnorePaneSwipe(e.target, e.currentTarget)) {
 			touchStartRef.current = null
@@ -677,9 +753,16 @@ export default function ConcordAppPage() {
 
 	return (
 		<div
+			id="concord-app-root"
 			onTouchStart={onTouchStart}
 			onTouchEnd={onTouchEnd}
-			className="h-[100dvh] w-full overflow-hidden bg-[#0a0a0e] text-zinc-100 flex relative"
+			onContextMenu={(e) => {
+				const tag = (e.target as HTMLElement)?.tagName
+				if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+					e.preventDefault()
+				}
+			}}
+			className="h-[100dvh] w-full overflow-hidden bg-[#0a0a0e] text-zinc-100 flex relative select-none"
 		>
 			{/* LEFT PANEL: Visual Realms Grid (Boxes with Round Images + Title) */}
 			<div
@@ -721,7 +804,7 @@ export default function ConcordAppPage() {
 
 			{/* CENTER STAGE: Active Space Conversation */}
 			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#0a0a0e]">
-				{/* Clean Top Bar (Respects Phone Safe-Area Inset) */}
+				{/* Clean Top Bar */}
 				<header className="px-4 pt-[max(0.65rem,env(safe-area-inset-top))] pb-2.5 flex items-center justify-between gap-3 shrink-0 bg-[#0e0e13]">
 					<div className="flex items-center gap-3 min-w-0">
 						<button
@@ -801,10 +884,10 @@ export default function ConcordAppPage() {
 					onEditNote={() => setNoteModalOpen(true)}
 				/>
 
-				{/* Conversation Stream (Tight Grouping, Readable 16px Type, Zero Border Clutter) */}
+				{/* Conversation Stream: Comic Speech Bubbles Coming From Sender Avatar, Name Underneath */}
 				<div
 					onClick={() => activeActionMsgId && setActiveActionMsgId(null)}
-					className="flex-1 overflow-y-auto px-4 md:px-8 py-4"
+					className="flex-1 overflow-y-auto px-3.5 md:px-8 py-4"
 				>
 					<div className="max-w-2xl mx-auto flex flex-col">
 						{messages.length === 0 ? (
@@ -817,33 +900,35 @@ export default function ConcordAppPage() {
 						) : (
 							messages.map((msg, idx) => {
 								const prev = idx > 0 ? messages[idx - 1] : null
+								const next = idx < messages.length - 1 ? messages[idx + 1] : null
 								const sameAuthorAsPrev = Boolean(prev && prev.authorId === msg.authorId && prev.isSelf === msg.isSelf)
+								const isLastInGroup = !next || next.authorId !== msg.authorId || next.isSelf !== msg.isSelf
 								const actionsOpen = activeActionMsgId === msg.id
+								const avatarUrl = safeMediaUrl(msg.authorAvatar)
+
 								return (
 									<div
 										key={msg.id}
-										onDoubleClick={() => setReplyTo(msg)}
+										onDoubleClick={() => triggerReply(msg)}
 										onTouchStart={(e) => onMessageTouchStart(msg.id, e)}
 										onTouchMove={onMessageTouchMove}
-										onTouchEnd={onMessageTouchEnd}
-										onTouchCancel={onMessageTouchEnd}
+										onTouchEnd={(e) => onMessageTouchEnd(msg, e)}
+										onTouchCancel={() => {
+											if (longPressTimerRef.current) {
+												clearTimeout(longPressTimerRef.current)
+												longPressTimerRef.current = null
+											}
+										}}
 										className={`group relative flex flex-col ${
 											msg.isSelf ? 'items-end' : 'items-start'
 										} ${idx === 0 ? '' : sameAuthorAsPrev ? 'mt-1.5' : 'mt-4'}`}
 									>
-										{!msg.isSelf && !sameAuthorAsPrev && (
-											<div className="flex items-center gap-2 mb-1 px-1">
-												<span className="text-[13px] font-semibold text-zinc-300">{msg.authorName}</span>
-												<span className="text-[11px] text-zinc-500">{msg.createdAt}</span>
-											</div>
-										)}
-
-										{/* Floating Overlay Action Bar (Zero layout gap between bubbles!) */}
+										{/* Floating Overlay Action Bar */}
 										<div
 											onClick={(e) => e.stopPropagation()}
-											className={`absolute -top-9 z-20 ${
-												msg.isSelf ? 'right-0' : 'left-0'
-											} flex items-center gap-1 px-2 py-1 rounded-full bg-[#1a1a24] shadow-xl shadow-black/60 transition-opacity ${
+											className={`absolute -top-10 z-20 ${
+												msg.isSelf ? 'right-0' : 'left-11'
+											} flex items-center gap-1 px-2 py-1 rounded-full bg-[#1a1a24] shadow-xl shadow-black/70 transition-opacity ${
 												actionsOpen
 													? 'opacity-100 pointer-events-auto'
 													: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
@@ -862,10 +947,7 @@ export default function ConcordAppPage() {
 											))}
 											<button
 												type="button"
-												onClick={() => {
-													setReplyTo(msg)
-													setActiveActionMsgId(null)
-												}}
+												onClick={() => triggerReply(msg)}
 												className="px-2.5 py-1 rounded-full hover:bg-white/10 text-[13px] font-semibold text-zinc-200 hover:text-white transition cursor-pointer"
 											>
 												Reply
@@ -881,68 +963,112 @@ export default function ConcordAppPage() {
 											)}
 										</div>
 
+										{/* Row: Avatar + Expressive Comic Speech Bubble */}
 										<div
-											className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-2.5 text-[16px] leading-[1.45] ${
-												msg.isSelf
-													? 'bg-[#6d28d9] text-white rounded-br-sm'
-													: 'bg-[#17171f] text-zinc-100 rounded-bl-sm'
+											className={`flex items-end gap-3 max-w-[92%] md:max-w-[80%] ${
+												msg.isSelf ? 'flex-row-reverse pr-2.5' : 'flex-row'
 											}`}
 										>
-											{msg.replyTo && (
-												<div className="mb-2 pl-2.5 border-l-2 border-white/40 text-[13px] text-white/75">
-													<span className="font-semibold text-white">{msg.replyTo.authorName}: </span>
-													<span className="italic">{msg.replyTo.excerpt}</span>
+											{/* Incoming Sender Avatar (aligned at bottom so bubble points right from their image!) */}
+											{!msg.isSelf && (
+												<div className="w-9 h-9 shrink-0 mb-0.5">
+													{isLastInGroup ? (
+														avatarUrl ? (
+															<img
+																src={avatarUrl}
+																alt={msg.authorName}
+																className="w-9 h-9 rounded-full object-cover"
+															/>
+														) : (
+															<div className="w-9 h-9 rounded-full bg-[#242433] text-zinc-200 flex items-center justify-center text-[14px] font-bold">
+																{msg.authorName?.[0]?.toUpperCase() || '?'}
+															</div>
+														)
+													) : null}
 												</div>
 											)}
 
-											{msg.attachment && msg.attachment.kind === 'image' && safeMediaUrl(msg.attachment.url) && (
-												<img
-													src={safeMediaUrl(msg.attachment.url) ?? undefined}
-													alt={msg.attachment.filename}
-													className="rounded-xl max-h-72 object-cover mb-1.5"
-												/>
-											)}
+											{/* Comic Speech Bubble with Pronounced Tail */}
+											<div
+												className={`relative rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.45] ${
+													msg.isSelf
+														? 'bg-[#6d28d9] text-white'
+														: 'bg-[#17171f] text-zinc-100'
+												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
+											>
+												{isLastInGroup && (
+													<SpeechBubbleTail
+														side={msg.isSelf ? 'right' : 'left'}
+														color={msg.isSelf ? '#6d28d9' : '#17171f'}
+													/>
+												)}
 
-											{msg.attachment && msg.attachment.kind === 'video' && safeMediaUrl(msg.attachment.url) && (
-												<video
-													src={safeMediaUrl(msg.attachment.url) ?? undefined}
-													controls
-													playsInline
-													className="rounded-xl max-h-72 w-full mb-1.5 bg-black"
-												/>
-											)}
-
-											{msg.attachment && msg.attachment.kind === 'audio' && safeMediaUrl(msg.attachment.url) && (
-												<div data-no-pane-swipe="true" className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 space-y-1.5">
-													<div className="flex items-center justify-between gap-2 text-[13px] text-white/80">
-														<span className="truncate font-medium">{msg.attachment.filename}</span>
-														<span className="text-[11px] shrink-0">Voice</span>
+												{msg.replyTo && (
+													<div className="mb-2 pl-2.5 border-l-2 border-white/40 text-[13px] text-white/75">
+														<span className="font-semibold text-white">{msg.replyTo.authorName}: </span>
+														<span className="italic">{msg.replyTo.excerpt}</span>
 													</div>
-													<audio
+												)}
+
+												{msg.attachment && msg.attachment.kind === 'image' && safeMediaUrl(msg.attachment.url) && (
+													<img
+														src={safeMediaUrl(msg.attachment.url) ?? undefined}
+														alt={msg.attachment.filename}
+														className="rounded-xl max-h-72 object-cover mb-1.5"
+													/>
+												)}
+
+												{msg.attachment && msg.attachment.kind === 'video' && safeMediaUrl(msg.attachment.url) && (
+													<video
 														src={safeMediaUrl(msg.attachment.url) ?? undefined}
 														controls
-														preload="metadata"
-														className="w-full h-9"
+														playsInline
+														className="rounded-xl max-h-72 w-full mb-1.5 bg-black"
 													/>
-												</div>
-											)}
+												)}
 
-											{msg.attachment && msg.attachment.kind === 'doc' && (
-												<div className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 text-[14px] flex items-center justify-between gap-3">
-													<span className="font-mono truncate">{msg.attachment.filename}</span>
-													<span className="text-[12px] font-semibold shrink-0">Doc</span>
-												</div>
-											)}
+												{msg.attachment && msg.attachment.kind === 'audio' && safeMediaUrl(msg.attachment.url) && (
+													<div data-no-pane-swipe="true" className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 space-y-1.5">
+														<div className="flex items-center justify-between gap-2 text-[13px] text-white/80">
+															<span className="truncate font-medium">{msg.attachment.filename}</span>
+															<span className="text-[11px] shrink-0">Voice</span>
+														</div>
+														<audio
+															src={safeMediaUrl(msg.attachment.url) ?? undefined}
+															controls
+															preload="metadata"
+															className="w-full h-9"
+														/>
+													</div>
+												)}
 
-											{msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
+												{msg.attachment && msg.attachment.kind === 'doc' && (
+													<div className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 text-[14px] flex items-center justify-between gap-3">
+														<span className="font-mono truncate">{msg.attachment.filename}</span>
+														<span className="text-[12px] font-semibold shrink-0">Doc</span>
+													</div>
+												)}
 
-											{msg.isSelf && (
-												<div className="text-[11px] text-white/65 text-right mt-0.5">{msg.createdAt}</div>
-											)}
+												{msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
+											</div>
 										</div>
 
+										{/* Sender Name & Time Underneath Bubble + Reactions */}
+										{isLastInGroup && (
+											<div
+												className={`flex items-center gap-2 mt-1 ${
+													msg.isSelf ? 'pr-3 justify-end' : 'pl-12 justify-start'
+												}`}
+											>
+												{!msg.isSelf && (
+													<span className="text-[12px] font-semibold text-zinc-400">{msg.authorName}</span>
+												)}
+												<span className="text-[11px] text-zinc-500">{msg.createdAt}</span>
+											</div>
+										)}
+
 										{msg.reactions && msg.reactions.length > 0 && (
-											<div className="flex gap-1.5 mt-1 px-1">
+											<div className={`flex gap-1.5 mt-1 ${msg.isSelf ? 'pr-3' : 'pl-12'}`}>
 												{msg.reactions.map((r) => (
 													<button
 														key={r.emoji}
@@ -976,9 +1102,9 @@ export default function ConcordAppPage() {
 					onSelectSpace={(id) => setActiveSpaceId(id)}
 				/>
 
-				{/* Reply Banner */}
+				{/* Reply Highlight Banner */}
 				{replyTo && (
-					<div className="px-4 py-2 bg-[#14141b] flex items-center justify-between text-[14px] text-zinc-300">
+					<div className="px-4 py-2 bg-[#161326] border-l-4 border-[#8b5cf6] flex items-center justify-between text-[14px] text-zinc-200">
 						<div className="truncate">
 							Replying to <span className="text-white font-semibold">{replyTo.authorName}</span>: {replyTo.content}
 						</div>
@@ -986,7 +1112,7 @@ export default function ConcordAppPage() {
 							type="button"
 							aria-label="Cancel reply"
 							onClick={() => setReplyTo(null)}
-							className="text-zinc-400 hover:text-white ml-3 p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+							className="text-zinc-400 hover:text-white ml-3 p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0"
 						>
 							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
 								<path d="M18 6L6 18" />
@@ -996,20 +1122,23 @@ export default function ConcordAppPage() {
 					</div>
 				)}
 
-				{/* Message Composer (Dedicated Media + Stickers/GIFs Buttons + Respects Phone Bottom Safe Area) */}
+				{/* Message Composer (min-w-0 ensures Send button NEVER clips off screen!) */}
 				<form
 					onSubmit={handleSendMessage}
-					className={`px-3.5 pt-2.5 bg-[#0e0e13] shrink-0 ${
+					className={`px-3 pt-2.5 bg-[#0e0e13] shrink-0 ${
 						openTray === 'none' ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-2.5'
 					}`}
 				>
-					<div className="max-w-2xl mx-auto flex items-center gap-2">
-						{/* Media Picker Button */}
+					<div className="max-w-2xl mx-auto flex items-center gap-2 w-full">
+						{/* Media Drawer Button */}
 						<button
 							type="button"
-							title="Photos, camera, files, and voice"
-							aria-label="Open media picker"
-							onClick={() => setOpenTray((t) => (t === 'media' ? 'none' : 'media'))}
+							title="Device gallery, files, camera, and voice"
+							aria-label="Open media drawer"
+							onClick={() => {
+								hapticTap()
+								setOpenTray((t) => (t === 'media' ? 'none' : 'media'))
+							}}
 							className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
 								openTray === 'media'
 									? 'bg-[#8b5cf6] text-white'
@@ -1022,9 +1151,14 @@ export default function ConcordAppPage() {
 							</svg>
 						</button>
 
-						{/* Text Input + Direct Stickers & GIFs Toggle Inside Pill */}
-						<div className="flex-1 flex items-center rounded-full bg-[#181820] pl-4 pr-1.5 py-1">
+						{/* Text Input + Direct Stickers & GIFs Toggle (min-w-0 prevents overflow!) */}
+						<div
+							className={`flex-1 min-w-0 flex items-center rounded-full bg-[#181820] pl-4 pr-1.5 py-1 transition-shadow ${
+								replyPulse || replyTo ? 'ring-2 ring-[#8b5cf6]' : ''
+							}`}
+						>
 							<input
+								ref={composerInputRef}
 								type="text"
 								value={draft}
 								onFocus={() => {
@@ -1033,13 +1167,16 @@ export default function ConcordAppPage() {
 								}}
 								onChange={(e) => setDraft(e.target.value)}
 								placeholder={`Message ${activeSpace.name}…`}
-								className="flex-1 min-w-0 bg-transparent py-2 text-[16px] text-white placeholder:text-zinc-500 focus:outline-none"
+								className="flex-1 min-w-0 w-full bg-transparent py-2 text-[16px] text-white placeholder:text-zinc-500 focus:outline-none"
 							/>
 							<button
 								type="button"
 								title="Stickers & GIFs"
 								aria-label="Open Stickers and GIFs"
-								onClick={() => setOpenTray((t) => (t === 'stickers' ? 'none' : 'stickers'))}
+								onClick={() => {
+									hapticTap()
+									setOpenTray((t) => (t === 'stickers' ? 'none' : 'stickers'))
+								}}
 								className={`w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
 									openTray === 'stickers'
 										? 'bg-[#8b5cf6] text-white'
@@ -1055,22 +1192,27 @@ export default function ConcordAppPage() {
 							</button>
 						</div>
 
-						{/* Send Button */}
+						{/* Crisp Circular Send Button (always visible on screen!) */}
 						<button
 							type="submit"
 							disabled={!draft.trim()}
-							className="h-11 px-5 rounded-full bg-white text-black hover:bg-zinc-200 disabled:opacity-35 text-[15px] font-bold transition cursor-pointer shrink-0"
+							aria-label="Send message"
+							className="w-11 h-11 rounded-full bg-white text-black hover:bg-zinc-200 disabled:bg-[#181820] disabled:text-zinc-600 flex items-center justify-center transition cursor-pointer shrink-0"
 						>
-							Send
+							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+								<line x1="12" y1="19" x2="12" y2="5" />
+								<polyline points="5 12 12 5 19 12" />
+							</svg>
 						</button>
 					</div>
 				</form>
 
-				{/* Visual Media Picker Tray */}
+				{/* Signal-Style Expandable Device Gallery Drawer */}
 				{openTray === 'media' && (
 					<AttachmentTray
 						spaceId={activeSpace.id}
-						recentMedia={spaceFiles}
+						galleryItems={deviceGallery}
+						onAddGalleryItems={(items) => setDeviceGallery((prev) => [...items, ...prev])}
 						onClose={() => setOpenTray('none')}
 						onSendAsset={handleSendAsset}
 					/>
@@ -1091,7 +1233,7 @@ export default function ConcordAppPage() {
 				)}
 			</main>
 
-			{/* RIGHT PANEL: Space Shared Media, Docs & Links (NO Series!) */}
+			{/* RIGHT PANEL: Space Shared Media, Docs & Links */}
 			<div
 				className={`fixed inset-y-0 right-0 z-30 w-[88vw] max-w-[350px] lg:static lg:w-[320px] lg:translate-x-0 transition-transform duration-300 ease-out ${
 					mobilePane === 'right' ? 'translate-x-0 shadow-2xl shadow-black' : 'translate-x-full'

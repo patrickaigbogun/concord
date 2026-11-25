@@ -34,7 +34,7 @@ export function RealmOverviewModal({
 						Close
 					</button>
 					<div className="absolute bottom-3 left-5 right-5">
-						<div className="text-[10px] uppercase tracking-widest text-[#c4b5fd] font-semibold">
+						<div className="text-[10px] text-[#c4b5fd] font-semibold">
 							{realm.isDirect ? 'Direct Realm' : 'Realm Overview'}
 						</div>
 						<h2 className="text-xl font-bold text-white tracking-tight">{realm.name}</h2>
@@ -70,7 +70,7 @@ export function RealmOverviewModal({
 
 					{/* Fun / Playful Realm Stats */}
 					<div className="rounded-2xl bg-[#15151b] border border-white/[0.07] p-4 space-y-2.5">
-						<div className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+						<div className="text-[11px] font-semibold text-zinc-400">
 							Realm Pulse &amp; Fun Stats
 						</div>
 						<div className="grid grid-cols-2 gap-3 text-xs">
@@ -102,7 +102,7 @@ export function RealmOverviewModal({
 					{/* All Spaces in Realm */}
 					<div className="space-y-2">
 						<div className="flex items-center justify-between gap-2">
-							<div className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+							<div className="text-[11px] font-semibold text-zinc-400">
 								Spaces in {realm.name}
 							</div>
 							{onCreateSpace && (

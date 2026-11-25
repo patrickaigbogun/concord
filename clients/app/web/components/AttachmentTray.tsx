@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { getSession } from '../../lib/auth'
+import { hapticTap } from '../../lib/haptics'
 import { uploadFile } from '../../lib/storage'
-import { isUuid, safeMediaUrl } from '../../lib/url'
+import { isUuid } from '../../lib/url'
 import type { FileAsset } from '../../lib/types'
+
+export interface DeviceGalleryItem {
+	id: string
+	file: File
+	previewUrl: string
+	kind: 'image' | 'video'
+}
 
 interface AttachmentTrayProps {
 	spaceId: string
-	recentMedia?: FileAsset[]
+	galleryItems: DeviceGalleryItem[]
+	onAddGalleryItems: (items: DeviceGalleryItem[]) => void
 	onClose: () => void
 	onSendAsset: (asset: FileAsset, caption?: string) => void
 }
@@ -128,10 +137,15 @@ function pickSupportedAudioMime(): string {
 
 export function AttachmentTray({
 	spaceId,
-	recentMedia = [],
+	galleryItems,
+	onAddGalleryItems,
 	onClose,
 	onSendAsset,
 }: AttachmentTrayProps) {
+	// Signal-style expandable drawer state: swipe up to expand, swipe down to collapse/close
+	const [expanded, setExpanded] = useState(false)
+	const dragStartYRef = useRef<number | null>(null)
+
 	const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
 	const [pendingVideo, setPendingVideo] = useState<PendingVideo | null>(null)
 	const [pendingDoc, setPendingDoc] = useState<PendingDoc | null>(null)
@@ -158,16 +172,17 @@ export function AttachmentTray({
 	const chunksRef = useRef<Blob[]>([])
 	const isMountedRef = useRef(true)
 	const isStartingRecordingRef = useRef(false)
-	const activePreviewUrlsRef = useRef<Set<string>>(new Set())
+	const ownedPreviewUrlsRef = useRef<Set<string>>(new Set())
 
-	const trackPreviewUrl = (url: string) => {
-		if (url.startsWith('blob:')) activePreviewUrlsRef.current.add(url)
+	const trackOwnedUrl = (url: string) => {
+		if (url.startsWith('blob:')) ownedPreviewUrlsRef.current.add(url)
 		return url
 	}
 
-	const releasePreviewUrl = (url?: string | null) => {
+	const releaseOwnedUrl = (url?: string | null) => {
 		if (!url || !url.startsWith('blob:')) return
-		activePreviewUrlsRef.current.delete(url)
+		if (!ownedPreviewUrlsRef.current.has(url)) return
+		ownedPreviewUrlsRef.current.delete(url)
 		URL.revokeObjectURL(url)
 	}
 
@@ -191,9 +206,9 @@ export function AttachmentTray({
 	}
 
 	const clearPending = () => {
-		if (pendingImage) releasePreviewUrl(pendingImage.previewUrl)
-		if (pendingVideo) releasePreviewUrl(pendingVideo.previewUrl)
-		if (recordedVoice) releasePreviewUrl(recordedVoice.previewUrl)
+		if (pendingImage) releaseOwnedUrl(pendingImage.previewUrl)
+		if (pendingVideo) releaseOwnedUrl(pendingVideo.previewUrl)
+		if (recordedVoice) releaseOwnedUrl(recordedVoice.previewUrl)
 		setPendingImage(null)
 		setPendingVideo(null)
 		setPendingDoc(null)
@@ -211,10 +226,10 @@ export function AttachmentTray({
 				mediaRecorderRef.current.stop()
 			}
 			stopRecordingInternals()
-			for (const url of activePreviewUrlsRef.current) {
+			for (const url of ownedPreviewUrlsRef.current) {
 				URL.revokeObjectURL(url)
 			}
-			activePreviewUrlsRef.current.clear()
+			ownedPreviewUrlsRef.current.clear()
 		}
 	}, [])
 
@@ -227,7 +242,7 @@ export function AttachmentTray({
 		const isLiveSignedIn = Boolean(getSession()?.access_token && isUuid(spaceId))
 		try {
 			const uploaded = await uploadFile(file, isUuid(spaceId) ? spaceId : undefined)
-			releasePreviewUrl(fallbackUrl)
+			releaseOwnedUrl(fallbackUrl)
 			return {
 				id: uploaded.id,
 				spaceId,
@@ -241,10 +256,10 @@ export function AttachmentTray({
 			}
 		} catch (err) {
 			if (isLiveSignedIn) {
-				releasePreviewUrl(fallbackUrl)
+				releaseOwnedUrl(fallbackUrl)
 				throw err instanceof Error ? err : new Error('Upload to Concord R2 failed')
 			}
-			activePreviewUrlsRef.current.delete(fallbackUrl)
+			ownedPreviewUrlsRef.current.delete(fallbackUrl)
 			return {
 				id: `local-${Date.now()}`,
 				spaceId,
@@ -259,32 +274,25 @@ export function AttachmentTray({
 		}
 	}
 
-	const handlePickMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0]
-		e.target.value = ''
-		if (!file) return
+	const openGalleryFileInEditor = async (item: DeviceGalleryItem) => {
 		clearPending()
 		setVoiceMode(false)
+		hapticTap()
 
-		if (file.type.startsWith('video/')) {
-			const previewUrl = trackPreviewUrl(URL.createObjectURL(file))
-			const withinSize = file.size <= MAX_INLINE_VIDEO_BYTES
-			const duration = withinSize ? await probeVideoDuration(previewUrl) : Infinity
-			if (!isMountedRef.current) {
-				releasePreviewUrl(previewUrl)
-				return
-			}
+		if (item.kind === 'video') {
+			const withinSize = item.file.size <= MAX_INLINE_VIDEO_BYTES
+			const duration = withinSize ? await probeVideoDuration(item.previewUrl) : Infinity
+			if (!isMountedRef.current) return
 			if (withinSize && duration <= MAX_INLINE_VIDEO_SECONDS) {
-				setPendingVideo({ file, previewUrl, duration, muted: false })
+				setPendingVideo({ file: item.file, previewUrl: item.previewUrl, duration, muted: false })
 				return
 			}
 			setUploading(true)
 			try {
-				const asset = await uploadAssetOrFallback(file, 'video', previewUrl)
+				const asset = await uploadAssetOrFallback(item.file, 'video', item.previewUrl)
 				onSendAsset(asset)
 				onClose()
 			} catch (err) {
-				releasePreviewUrl(previewUrl)
 				setStatusMsg(err instanceof Error ? err.message : 'Video upload failed')
 			} finally {
 				setUploading(false)
@@ -292,8 +300,29 @@ export function AttachmentTray({
 			return
 		}
 
-		const previewUrl = trackPreviewUrl(URL.createObjectURL(file))
-		setPendingImage({ file, previewUrl, rotation: 0, cropMode: 'original' })
+		setPendingImage({ file: item.file, previewUrl: item.previewUrl, rotation: 0, cropMode: 'original' })
+	}
+
+	const handlePickDeviceMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files || [])
+		e.target.value = ''
+		if (files.length === 0) return
+
+		const newItems: DeviceGalleryItem[] = files.map((file, idx) => ({
+			id: `dev-${Date.now()}-${idx}`,
+			file,
+			previewUrl: URL.createObjectURL(file),
+			kind: file.type.startsWith('video/') ? 'video' : 'image',
+		}))
+
+		onAddGalleryItems(newItems)
+
+		// If user picked a single item, jump straight into preview; if multiple, show them in the scrollable drawer
+		if (newItems.length === 1) {
+			await openGalleryFileInEditor(newItems[0])
+		} else {
+			setExpanded(true)
+		}
 	}
 
 	const handlePickDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -328,13 +357,12 @@ export function AttachmentTray({
 					pendingImage.rotation,
 					pendingImage.cropMode
 				)
-				const fallbackUrl = trackPreviewUrl(URL.createObjectURL(optimized))
+				const fallbackUrl = trackOwnedUrl(URL.createObjectURL(optimized))
 				asset = await uploadAssetOrFallback(optimized, 'image', fallbackUrl)
-				releasePreviewUrl(pendingImage.previewUrl)
 			} else if (pendingVideo) {
 				asset = await uploadAssetOrFallback(pendingVideo.file, 'video', pendingVideo.previewUrl)
 			} else if (pendingDoc) {
-				const fallbackUrl = pendingDoc.isPdf ? trackPreviewUrl(URL.createObjectURL(pendingDoc.file)) : '#'
+				const fallbackUrl = pendingDoc.isPdf ? trackOwnedUrl(URL.createObjectURL(pendingDoc.file)) : '#'
 				asset = await uploadAssetOrFallback(pendingDoc.file, 'doc', fallbackUrl, pendingDoc.textPreview)
 			} else {
 				return
@@ -355,7 +383,7 @@ export function AttachmentTray({
 			return
 		}
 		if (recordedVoice) {
-			releasePreviewUrl(recordedVoice.previewUrl)
+			releaseOwnedUrl(recordedVoice.previewUrl)
 			setRecordedVoice(null)
 		}
 		setStatusMsg(null)
@@ -379,7 +407,7 @@ export function AttachmentTray({
 				const elapsed = Math.max(1, (Date.now() - recordingStartRef.current) / 1000)
 				const finalMime = recorder.mimeType || mimeType
 				const blob = new Blob(chunksRef.current, { type: finalMime })
-				const previewUrl = trackPreviewUrl(URL.createObjectURL(blob))
+				const previewUrl = trackOwnedUrl(URL.createObjectURL(blob))
 				setRecordedVoice({ blob, mimeType: finalMime, previewUrl, duration: Math.round(elapsed) })
 				setIsRecording(false)
 				stopRecordingInternals()
@@ -451,19 +479,39 @@ export function AttachmentTray({
 		}
 	}
 
-	const visualRecent = recentMedia.filter((m) => (m.kind === 'image' || m.kind === 'video') && safeMediaUrl(m.url))
+	// Swipe up/down on drawer handle to expand, collapse, or dismiss
+	const onHandleTouchStart = (e: React.TouchEvent) => {
+		dragStartYRef.current = e.touches[0].clientY
+	}
+
+	const onHandleTouchEnd = (e: React.TouchEvent) => {
+		if (dragStartYRef.current === null) return
+		const dy = e.changedTouches[0].clientY - dragStartYRef.current
+		dragStartYRef.current = null
+		if (dy < -36) {
+			hapticTap()
+			setExpanded(true)
+		} else if (dy > 40) {
+			hapticTap()
+			if (expanded) setExpanded(false)
+			else onClose()
+		}
+	}
 
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className="bg-[#111116] px-4 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] select-none"
+			className={`bg-[#111116] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
+				expanded ? 'h-[76dvh]' : 'h-[44dvh] min-h-[300px]'
+			}`}
 		>
 			{/* Hidden OS Pickers */}
 			<input
 				ref={galleryInputRef}
 				type="file"
 				accept="image/*,video/*"
-				onChange={handlePickMedia}
+				multiple
+				onChange={handlePickDeviceMedia}
 				className="hidden"
 			/>
 			<input
@@ -471,7 +519,7 @@ export function AttachmentTray({
 				type="file"
 				accept="image/*"
 				capture="environment"
-				onChange={handlePickMedia}
+				onChange={handlePickDeviceMedia}
 				className="hidden"
 			/>
 			<input
@@ -482,282 +530,321 @@ export function AttachmentTray({
 				className="hidden"
 			/>
 
-			{/* Active Preview: Image / Video / Doc */}
-			{pendingImage || pendingVideo || pendingDoc ? (
-				<div className="space-y-3">
-					<div className="flex items-center justify-between">
-						<button
-							type="button"
-							onClick={clearPending}
-							className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-						>
-							Back
-						</button>
-						<div className="flex items-center gap-2">
-							{pendingImage && (
-								<>
-									<button
-										type="button"
-										onClick={() =>
-											setPendingImage((p) => (p ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
-										}
-										className="px-3 py-1.5 rounded-full bg-[#1a1a23] text-[13px] font-semibold text-zinc-200 cursor-pointer"
-									>
-										Rotate
-									</button>
-									<button
-										type="button"
-										onClick={() =>
-											setPendingImage((p) =>
-												p ? { ...p, cropMode: p.cropMode === 'square' ? 'original' : 'square' } : p
-											)
-										}
-										className={`px-3 py-1.5 rounded-full text-[13px] font-semibold cursor-pointer ${
-											pendingImage.cropMode === 'square'
-												? 'bg-[#8b5cf6] text-white'
-												: 'bg-[#1a1a23] text-zinc-200'
-										}`}
-									>
-										1:1
-									</button>
-								</>
-							)}
-						</div>
-					</div>
+			{/* Swipeable Drawer Handle */}
+			<div
+				onTouchStart={onHandleTouchStart}
+				onTouchEnd={onHandleTouchEnd}
+				onClick={() => {
+					hapticTap()
+					setExpanded((v) => !v)
+				}}
+				className="pt-2.5 pb-2 flex flex-col items-center cursor-pointer shrink-0"
+				title={expanded ? 'Collapse drawer' : 'Expand drawer'}
+			>
+				<span className="w-11 h-1.5 rounded-full bg-white/20" />
+			</div>
 
-					{pendingImage && (
-						<div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-56">
-							<img
-								src={pendingImage.previewUrl}
-								alt="Preview"
-								style={{ transform: `rotate(${pendingImage.rotation}deg)` }}
-								className={`max-h-56 transition-transform ${
-									pendingImage.cropMode === 'square' ? 'w-52 h-52 object-cover' : 'object-contain'
-								}`}
-							/>
-						</div>
-					)}
-
-					{pendingVideo && (
-						<div className="rounded-2xl overflow-hidden bg-black">
-							<video
-								src={pendingVideo.previewUrl}
-								controls
-								muted={pendingVideo.muted}
-								playsInline
-								className="w-full max-h-52 object-contain"
-							/>
-						</div>
-					)}
-
-					{pendingDoc && (
-						<div className="rounded-2xl bg-[#181820] p-4 flex items-center justify-between gap-3">
-							<div className="min-w-0">
-								<div className="text-[15px] font-semibold text-white truncate">{pendingDoc.file.name}</div>
-								<div className="text-[13px] text-zinc-400">{formatBytes(pendingDoc.file.size)}</div>
-							</div>
-							<span className="px-3 py-1 rounded-full bg-[#8b5cf6]/20 text-[#c4b5fd] text-[12px] font-bold">
-								{pendingDoc.isPdf ? 'PDF' : 'FILE'}
-							</span>
-						</div>
-					)}
-
-					<div className="flex items-center gap-2">
-						<input
-							type="text"
-							value={caption}
-							onChange={(e) => setCaption(e.target.value)}
-							placeholder="Add a caption…"
-							className="flex-1 rounded-2xl bg-[#181820] px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 focus:outline-none"
-						/>
-						<button
-							type="button"
-							disabled={uploading}
-							onClick={handleSendPending}
-							className="px-5 py-3 rounded-2xl bg-white text-black hover:bg-zinc-200 disabled:opacity-40 text-[14px] font-bold cursor-pointer shrink-0"
-						>
-							{uploading ? 'Sending…' : 'Send'}
-						</button>
-					</div>
-				</div>
-			) : voiceMode ? (
-				<div className="space-y-4">
-					<div className="flex items-center justify-between">
-						<button
-							type="button"
-							onClick={() => {
-								if (isRecording) stopVoiceRecording()
-								clearPending()
-								setVoiceMode(false)
-							}}
-							className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-						>
-							Back
-						</button>
-						<span className="text-[14px] font-semibold text-white">Voice Note</span>
-						<span className="text-[13px] font-mono text-zinc-400">{formatSeconds(recordingSeconds)}</span>
-					</div>
-
-					{recordedVoice ? (
-						<div className="space-y-3">
-							<audio src={recordedVoice.previewUrl} controls className="w-full h-10" />
-							<div className="flex items-center justify-end gap-2">
-								<button
-									type="button"
-									onClick={() => {
-										releasePreviewUrl(recordedVoice.previewUrl)
-										setRecordedVoice(null)
-									}}
-									className="px-4 py-2.5 rounded-2xl bg-[#1a1a23] text-[14px] font-semibold text-zinc-300 cursor-pointer"
-								>
-									Retake
-								</button>
-								<button
-									type="button"
-									disabled={uploading}
-									onClick={handleSendVoice}
-									className="px-5 py-2.5 rounded-2xl bg-white text-black text-[14px] font-bold cursor-pointer"
-								>
-									{uploading ? 'Sending…' : 'Send Voice'}
-								</button>
-							</div>
-						</div>
-					) : (
-						<div className="flex flex-col items-center gap-4 py-3">
-							<div className="flex items-end justify-center gap-1 h-12 w-full max-w-xs">
-								{levelBars.map((h, i) => (
-									<span
-										key={i}
-										style={{ height: `${isRecording ? h : 20}%` }}
-										className={`w-1.5 rounded-full transition-all duration-75 ${
-											isRecording ? 'bg-[#a78bfa]' : 'bg-zinc-700'
-										}`}
-									/>
-								))}
-							</div>
+			{/* Scrollable Drawer Body */}
+			<div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3.5 pb-2">
+				{pendingImage || pendingVideo || pendingDoc ? (
+					<div className="space-y-3 pb-2">
+						<div className="flex items-center justify-between">
 							<button
 								type="button"
-								onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-								className={`px-6 py-3 rounded-full text-[15px] font-bold transition cursor-pointer ${
-									isRecording
-										? 'bg-red-500 text-white hover:bg-red-600'
-										: 'bg-[#8b5cf6] text-white hover:bg-[#7c3aed]'
-								}`}
+								onClick={clearPending}
+								className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
 							>
-								{isRecording ? 'Stop Recording' : 'Tap to Record'}
+								Back
+							</button>
+							<div className="flex items-center gap-2">
+								{pendingImage && (
+									<>
+										<button
+											type="button"
+											onClick={() =>
+												setPendingImage((p) => (p ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
+											}
+											className="px-3 py-1.5 rounded-full bg-[#1a1a23] text-[13px] font-semibold text-zinc-200 cursor-pointer"
+										>
+											Rotate
+										</button>
+										<button
+											type="button"
+											onClick={() =>
+												setPendingImage((p) =>
+													p ? { ...p, cropMode: p.cropMode === 'square' ? 'original' : 'square' } : p
+												)
+											}
+											className={`px-3 py-1.5 rounded-full text-[13px] font-semibold cursor-pointer ${
+												pendingImage.cropMode === 'square'
+													? 'bg-[#8b5cf6] text-white'
+													: 'bg-[#1a1a23] text-zinc-200'
+											}`}
+										>
+											1:1
+										</button>
+									</>
+								)}
+							</div>
+						</div>
+
+						{pendingImage && (
+							<div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-56">
+								<img
+									src={pendingImage.previewUrl}
+									alt="Preview"
+									style={{ transform: `rotate(${pendingImage.rotation}deg)` }}
+									className={`max-h-56 transition-transform ${
+										pendingImage.cropMode === 'square' ? 'w-52 h-52 object-cover' : 'object-contain'
+									}`}
+								/>
+							</div>
+						)}
+
+						{pendingVideo && (
+							<div className="rounded-2xl overflow-hidden bg-black">
+								<video
+									src={pendingVideo.previewUrl}
+									controls
+									muted={pendingVideo.muted}
+									playsInline
+									className="w-full max-h-52 object-contain"
+								/>
+							</div>
+						)}
+
+						{pendingDoc && (
+							<div className="rounded-2xl bg-[#181820] p-4 flex items-center justify-between gap-3">
+								<div className="min-w-0">
+									<div className="text-[15px] font-semibold text-white truncate">{pendingDoc.file.name}</div>
+									<div className="text-[13px] text-zinc-400">{formatBytes(pendingDoc.file.size)}</div>
+								</div>
+								<span className="px-3 py-1 rounded-full bg-[#8b5cf6]/20 text-[#c4b5fd] text-[12px] font-semibold">
+									{pendingDoc.isPdf ? 'PDF' : 'File'}
+								</span>
+							</div>
+						)}
+
+						<div className="flex items-center gap-2">
+							<input
+								type="text"
+								value={caption}
+								onChange={(e) => setCaption(e.target.value)}
+								placeholder="Add a caption…"
+								className="flex-1 min-w-0 rounded-2xl bg-[#181820] px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 focus:outline-none"
+							/>
+							<button
+								type="button"
+								disabled={uploading}
+								onClick={handleSendPending}
+								className="px-5 py-3 rounded-2xl bg-white text-black hover:bg-zinc-200 disabled:opacity-40 text-[14px] font-bold cursor-pointer shrink-0"
+							>
+								{uploading ? 'Sending…' : 'Send'}
 							</button>
 						</div>
-					)}
-				</div>
-			) : (
-				/* Clean Visual Media Sheet (Action Pills + Real Visual Media Grid — Zero Ugly Dashed Boxes) */
-				<div className="space-y-4">
-					<div className="flex items-center justify-between gap-2">
-						<div className="grid grid-cols-4 gap-2 flex-1">
+					</div>
+				) : voiceMode ? (
+					<div className="space-y-4 py-1">
+						<div className="flex items-center justify-between">
+							<button
+								type="button"
+								onClick={() => {
+									if (isRecording) stopVoiceRecording()
+									clearPending()
+									setVoiceMode(false)
+								}}
+								className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
+							>
+								Back
+							</button>
+							<span className="text-[15px] font-semibold text-white">Voice Note</span>
+							<span className="text-[13px] font-mono text-zinc-400">{formatSeconds(recordingSeconds)}</span>
+						</div>
+
+						{recordedVoice ? (
+							<div className="space-y-3">
+								<audio src={recordedVoice.previewUrl} controls className="w-full h-10" />
+								<div className="flex items-center justify-end gap-2">
+									<button
+										type="button"
+										onClick={() => {
+											releaseOwnedUrl(recordedVoice.previewUrl)
+											setRecordedVoice(null)
+										}}
+										className="px-4 py-2.5 rounded-2xl bg-[#1a1a23] text-[14px] font-semibold text-zinc-300 cursor-pointer"
+									>
+										Retake
+									</button>
+									<button
+										type="button"
+										disabled={uploading}
+										onClick={handleSendVoice}
+										className="px-5 py-2.5 rounded-2xl bg-white text-black text-[14px] font-bold cursor-pointer"
+									>
+										{uploading ? 'Sending…' : 'Send Voice'}
+									</button>
+								</div>
+							</div>
+						) : (
+							<div className="flex flex-col items-center gap-4 py-4">
+								<div className="flex items-end justify-center gap-1 h-12 w-full max-w-xs">
+									{levelBars.map((h, i) => (
+										<span
+											key={i}
+											style={{ height: `${isRecording ? h : 20}%` }}
+											className={`w-1.5 rounded-full transition-all duration-75 ${
+												isRecording ? 'bg-[#a78bfa]' : 'bg-zinc-700'
+											}`}
+										/>
+									))}
+								</div>
+								<button
+									type="button"
+									onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
+									className={`px-6 py-3 rounded-full text-[15px] font-bold transition cursor-pointer ${
+										isRecording
+											? 'bg-red-500 text-white hover:bg-red-600'
+											: 'bg-[#8b5cf6] text-white hover:bg-[#7c3aed]'
+									}`}
+								>
+									{isRecording ? 'Stop Recording' : 'Tap to Record'}
+								</button>
+							</div>
+						)}
+					</div>
+				) : (
+					/* Signal-Style Device Gallery Area (Scrollable Device Photos/Videos) */
+					<div className="h-full flex flex-col">
+						{galleryItems.length > 0 ? (
+							<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2">
+								{galleryItems.map((item) => (
+									<button
+										key={item.id}
+										type="button"
+										onClick={() => void openGalleryFileInEditor(item)}
+										className="aspect-square rounded-2xl overflow-hidden bg-black relative group cursor-pointer"
+									>
+										{item.kind === 'video' ? (
+											<>
+												<video src={item.previewUrl} muted playsInline className="w-full h-full object-cover" />
+												<span className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center">
+													<svg className="w-3.5 h-3.5 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+														<path d="M6 4l15 8-15 8V4z" />
+													</svg>
+												</span>
+											</>
+										) : (
+											<img
+												src={item.previewUrl}
+												alt={item.file.name}
+												className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+											/>
+										)}
+									</button>
+								))}
+								<button
+									type="button"
+									onClick={() => galleryInputRef.current?.click()}
+									className="aspect-square rounded-2xl bg-[#181822] hover:bg-[#222230] flex flex-col items-center justify-center gap-1.5 text-zinc-300 cursor-pointer"
+								>
+									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+										<line x1="12" y1="5" x2="12" y2="19" />
+										<line x1="5" y1="12" x2="19" y2="12" />
+									</svg>
+									<span className="text-[12px] font-semibold">More</span>
+								</button>
+							</div>
+						) : (
 							<button
 								type="button"
 								onClick={() => galleryInputRef.current?.click()}
-								className="flex flex-col items-center gap-1.5 py-2.5 rounded-2xl bg-[#181820] hover:bg-[#22222d] transition cursor-pointer"
+								className="flex-1 min-h-[150px] w-full rounded-2xl bg-[#171720] hover:bg-[#1e1e2a] flex flex-col items-center justify-center gap-2.5 p-6 text-center transition cursor-pointer"
 							>
-								<span className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 text-[#c4b5fd] flex items-center justify-center">
-									<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<span className="w-12 h-12 rounded-2xl bg-[#8b5cf6]/20 text-[#c4b5fd] flex items-center justify-center">
+									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 										<rect x="3" y="3" width="18" height="18" rx="3" />
 										<circle cx="8.5" cy="8.5" r="1.5" />
 										<path d="M21 15l-5-5L5 21" />
 									</svg>
 								</span>
-								<span className="text-[12px] font-semibold text-zinc-200">Gallery</span>
+								<div className="space-y-0.5">
+									<div className="text-[15px] font-semibold text-white">Open Device Gallery</div>
+									<div className="text-[13px] text-zinc-400">
+										Pick photos or videos from your phone — swipe up to expand
+									</div>
+								</div>
 							</button>
-
-							<button
-								type="button"
-								onClick={() => cameraInputRef.current?.click()}
-								className="flex flex-col items-center gap-1.5 py-2.5 rounded-2xl bg-[#181820] hover:bg-[#22222d] transition cursor-pointer"
-							>
-								<span className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
-									<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-										<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-										<circle cx="12" cy="13" r="4" />
-									</svg>
-								</span>
-								<span className="text-[12px] font-semibold text-zinc-200">Camera</span>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => docInputRef.current?.click()}
-								className="flex flex-col items-center gap-1.5 py-2.5 rounded-2xl bg-[#181820] hover:bg-[#22222d] transition cursor-pointer"
-							>
-								<span className="w-10 h-10 rounded-full bg-sky-500/20 text-sky-300 flex items-center justify-center">
-									<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-										<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-										<polyline points="14 2 14 8 20 8" />
-									</svg>
-								</span>
-								<span className="text-[12px] font-semibold text-zinc-200">Files</span>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => setVoiceMode(true)}
-								className="flex flex-col items-center gap-1.5 py-2.5 rounded-2xl bg-[#181820] hover:bg-[#22222d] transition cursor-pointer"
-							>
-								<span className="w-10 h-10 rounded-full bg-rose-500/20 text-rose-300 flex items-center justify-center">
-									<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-										<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-										<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-										<line x1="12" y1="19" x2="12" y2="23" />
-									</svg>
-								</span>
-								<span className="text-[12px] font-semibold text-zinc-200">Voice</span>
-							</button>
-						</div>
+						)}
 					</div>
+				)}
 
-					{/* Visual Media Thumbnail Strip / Grid */}
-					{visualRecent.length > 0 && (
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<span className="text-[12px] font-semibold text-zinc-400">Recent in Space</span>
-								<button
-									type="button"
-									onClick={() => galleryInputRef.current?.click()}
-									className="text-[12px] font-semibold text-[#a78bfa] hover:text-white cursor-pointer"
-								>
-									Browse device
-								</button>
-							</div>
-							<div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-40 overflow-y-auto no-scrollbar">
-								{visualRecent.slice(0, 9).map((item) => {
-									const url = safeMediaUrl(item.url)
-									if (!url) return null
-									return (
-										<button
-											key={item.id}
-											type="button"
-											onClick={() => {
-												onSendAsset({ ...item, id: `resend-${Date.now()}`, createdAt: 'Just now' })
-												onClose()
-											}}
-											className="aspect-square rounded-2xl overflow-hidden bg-black relative group cursor-pointer"
-										>
-											{item.kind === 'video' ? (
-												<video src={url} muted playsInline className="w-full h-full object-cover" />
-											) : (
-												<img src={url} alt={item.filename} className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
-											)}
-										</button>
-									)
-								})}
-							</div>
-						</div>
-					)}
-				</div>
-			)}
+				{statusMsg && (
+					<div className="mt-2 rounded-xl bg-red-500/15 px-3.5 py-2 text-[13px] text-red-300">
+						{statusMsg}
+					</div>
+				)}
+			</div>
 
-			{statusMsg && (
-				<div className="mt-3 rounded-xl bg-red-500/15 px-3.5 py-2 text-[13px] text-red-300">
-					{statusMsg}
+			{/* Signal-Style Bottom Action Row (Gallery | File | Camera | Voice) */}
+			{!pendingImage && !pendingVideo && !pendingDoc && !voiceMode && (
+				<div className="px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-[#0d0d12] grid grid-cols-4 gap-3 shrink-0">
+					<button
+						type="button"
+						onClick={() => galleryInputRef.current?.click()}
+						className="flex flex-col items-center gap-1.5 cursor-pointer group"
+					>
+						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
+							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<rect x="3" y="3" width="18" height="18" rx="3" />
+								<circle cx="8.5" cy="8.5" r="1.5" />
+								<path d="M21 15l-5-5L5 21" />
+							</svg>
+						</span>
+						<span className="text-[12px] font-medium text-zinc-300">Gallery</span>
+					</button>
+
+					<button
+						type="button"
+						onClick={() => docInputRef.current?.click()}
+						className="flex flex-col items-center gap-1.5 cursor-pointer group"
+					>
+						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
+							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+								<polyline points="14 2 14 8 20 8" />
+							</svg>
+						</span>
+						<span className="text-[12px] font-medium text-zinc-300">File</span>
+					</button>
+
+					<button
+						type="button"
+						onClick={() => cameraInputRef.current?.click()}
+						className="flex flex-col items-center gap-1.5 cursor-pointer group"
+					>
+						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
+							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+								<circle cx="12" cy="13" r="4" />
+							</svg>
+						</span>
+						<span className="text-[12px] font-medium text-zinc-300">Camera</span>
+					</button>
+
+					<button
+						type="button"
+						onClick={() => setVoiceMode(true)}
+						className="flex flex-col items-center gap-1.5 cursor-pointer group"
+					>
+						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
+							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+								<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+								<line x1="12" y1="19" x2="12" y2="23" />
+							</svg>
+						</span>
+						<span className="text-[12px] font-medium text-zinc-300">Voice</span>
+					</button>
 				</div>
 			)}
 		</div>

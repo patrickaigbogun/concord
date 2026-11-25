@@ -77,6 +77,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
 			authorId: 'u-leo',
 			authorName: 'Leo',
 			authorHandle: 'leo',
+			authorAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&q=80',
 			content: 'There is something deeply calming about a chat space where the UI gets out of the way and lets sentences breathe.',
 			createdAt: '15:12',
 			reactions: [{ emoji: '✦', count: 3, reacted: true }],
@@ -87,6 +88,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
 			authorId: 'u-oti',
 			authorName: 'Oti',
 			authorHandle: 'oti',
+			authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
 			content: 'Agreed. I uploaded the draft essay as a Markdown doc — swipe into the right panel to read it natively without leaving the Space.',
 			replyTo: {
 				id: 'm1',
@@ -113,6 +115,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
 			authorId: 'u-oti',
 			authorName: 'Oti',
 			authorHandle: 'oti',
+			authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
 			content: 'Opening paragraph for Issue 04 is up in the Series tab. Curious if the cadence feels too rushed.',
 			createdAt: '14:40',
 		},

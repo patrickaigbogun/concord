@@ -136,7 +136,7 @@ export function RealmNoteBar({ note, onEditNote }: RealmNoteBarProps) {
 		return (
 			<div className="px-4 py-1.5 bg-[#111116]/90 border-b border-white/[0.06] flex items-center justify-between gap-3">
 				<div className="flex items-center gap-2 min-w-0">
-					<span className="shrink-0 text-[10px] uppercase tracking-wider font-semibold text-zinc-500 bg-white/[0.04] px-2 py-0.5 rounded-full">
+					<span className="shrink-0 text-[10px] font-semibold text-zinc-500 bg-white/[0.04] px-2 py-0.5 rounded-full">
 						Note
 					</span>
 					<span className="text-xs text-zinc-500 truncate font-editorial italic">
@@ -163,7 +163,7 @@ export function RealmNoteBar({ note, onEditNote }: RealmNoteBarProps) {
 			{audioUrl && <audio ref={audioRef} src={audioUrl} preload="metadata" />}
 
 			<div className="flex items-center gap-2.5 min-w-0">
-				<span className="shrink-0 text-[11px] uppercase tracking-wider font-bold text-[#c4b5fd] bg-[#8b5cf6]/20 px-2.5 py-0.5 rounded-full">
+				<span className="shrink-0 text-[11px] font-bold text-[#c4b5fd] bg-[#8b5cf6]/20 px-2.5 py-0.5 rounded-full">
 					Note
 				</span>
 				<p className="text-[14px] text-zinc-200 truncate font-editorial italic">

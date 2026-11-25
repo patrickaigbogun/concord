@@ -314,7 +314,7 @@ export default function DownloadPage() {
 
 									{highlighted.sizeLabel && (
 										<div className="px-3.5 py-2 rounded-xl bg-[#141414] border border-[#222222] text-left sm:text-right shrink-0">
-											<div className="text-[11px] uppercase tracking-wider text-neutral-500 font-bold">Package Size</div>
+											<div className="text-[11px] text-neutral-500 font-bold">Package Size</div>
 											<div className="text-sm font-bold text-white">{highlighted.sizeLabel}</div>
 										</div>
 									)}
@@ -327,7 +327,7 @@ export default function DownloadPage() {
 								{/* Package Metadata Bar */}
 								<div className="p-4 rounded-xl bg-[#141414] border border-[#222222] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 									<div className="space-y-0.5 min-w-0">
-										<div className="text-xs uppercase tracking-wider text-neutral-500 font-bold">
+										<div className="text-xs text-neutral-500 font-bold">
 											Build Artifact
 										</div>
 										<div className="text-sm font-mono font-semibold text-neutral-200 truncate">
@@ -360,7 +360,7 @@ export default function DownloadPage() {
 				<div className="max-w-[1720px] mx-auto space-y-8">
 					<div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
 						<div className="space-y-2">
-							<div className="text-xs uppercase tracking-widest text-[#7c3aed] font-bold">
+							<div className="text-xs text-[#7c3aed] font-bold">
 								All Platforms
 							</div>
 							<h3 className="text-2xl sm:text-4xl font-bold text-white font-heading tracking-tight">

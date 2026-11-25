@@ -167,7 +167,7 @@ function ModalShell({
 			>
 				<div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-white/[0.07]">
 					<div className="min-w-0">
-						<div className="text-[10px] uppercase tracking-widest text-[#c4b5fd] font-semibold">
+						<div className="text-[10px] text-[#c4b5fd] font-semibold">
 							{eyebrow}
 						</div>
 						<h2 className="text-lg font-bold text-white tracking-tight mt-0.5">{title}</h2>
@@ -305,7 +305,7 @@ export function CreateRealmModal({ onClose, onCreated, onSubmit }: CreateRealmMo
 			<form onSubmit={handleSubmit} className="space-y-4">
 				{/* Cover Image Upload */}
 				<div className="space-y-2">
-					<label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<label className="block text-[11px] font-semibold text-zinc-400">
 						Cover Image
 					</label>
 					<input
@@ -371,7 +371,7 @@ export function CreateRealmModal({ onClose, onCreated, onSubmit }: CreateRealmMo
 				{/* Realm Name */}
 				<div className="space-y-1.5">
 					<div className="flex items-center justify-between">
-						<label htmlFor="realm-name" className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+						<label htmlFor="realm-name" className="text-[11px] font-semibold text-zinc-400">
 							Name
 						</label>
 						{derivedSlug && (
@@ -392,7 +392,7 @@ export function CreateRealmModal({ onClose, onCreated, onSubmit }: CreateRealmMo
 
 				{/* Description */}
 				<div className="space-y-1.5">
-					<label htmlFor="realm-description" className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<label htmlFor="realm-description" className="block text-[11px] font-semibold text-zinc-400">
 						Description
 					</label>
 					<textarea
@@ -562,7 +562,7 @@ export function CreateSpaceModal({
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="space-y-1.5">
 						<div className="flex items-center justify-between">
-							<label htmlFor="space-name" className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+							<label htmlFor="space-name" className="text-[11px] font-semibold text-zinc-400">
 								Name
 							</label>
 							{derivedSlug && (
@@ -582,7 +582,7 @@ export function CreateSpaceModal({
 					</div>
 
 					<div className="space-y-1.5">
-						<label htmlFor="space-description" className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+						<label htmlFor="space-description" className="block text-[11px] font-semibold text-zinc-400">
 							Description
 						</label>
 						<textarea
@@ -729,7 +729,7 @@ export function PublishPostModal({
 			<form onSubmit={handleSubmit} className="space-y-4">
 				{/* Title */}
 				<div className="space-y-1.5">
-					<label htmlFor="post-title" className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<label htmlFor="post-title" className="block text-[11px] font-semibold text-zinc-400">
 						Title
 					</label>
 					<input
@@ -747,7 +747,7 @@ export function PublishPostModal({
 				{/* Markdown Body */}
 				<div className="space-y-1.5">
 					<div className="flex items-center justify-between">
-						<label htmlFor="post-body" className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+						<label htmlFor="post-body" className="text-[11px] font-semibold text-zinc-400">
 							Body (Markdown)
 						</label>
 						<span className="text-[11px] text-zinc-500">
@@ -766,7 +766,7 @@ export function PublishPostModal({
 
 				{/* Echo Policy Selector */}
 				<div className="space-y-2">
-					<div className="text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<div className="text-[11px] font-semibold text-zinc-400">
 						Echo Policy
 					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -938,7 +938,7 @@ export function SpacePersonaModal({
 
 				{/* Contextual @tag */}
 				<div className="space-y-1.5">
-					<label htmlFor="persona-tag" className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<label htmlFor="persona-tag" className="block text-[11px] font-semibold text-zinc-400">
 						Contextual @tag
 					</label>
 					<div className="relative flex items-center">
@@ -961,7 +961,7 @@ export function SpacePersonaModal({
 
 				{/* Display Name Override */}
 				<div className="space-y-1.5">
-					<label htmlFor="persona-display-name" className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400">
+					<label htmlFor="persona-display-name" className="block text-[11px] font-semibold text-zinc-400">
 						Display Name Override
 					</label>
 					<input
