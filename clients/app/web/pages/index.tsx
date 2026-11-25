@@ -1277,14 +1277,14 @@ export default function ConcordAppPage() {
 											<div
 												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#073b26] text-[#eef7c8]'
+														? 'bg-[#031f14] text-[#f2fbd0]'
 														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#073b26' : '#2d2722'}
+														color={msg.isSelf ? '#031f14' : '#2d2722'}
 													/>
 												)}
 
@@ -1377,7 +1377,7 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#073b26] text-[#eef7c8]'
+																? 'bg-[#031f14] text-[#f2fbd0]'
 																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>

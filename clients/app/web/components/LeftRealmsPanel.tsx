@@ -160,7 +160,7 @@ export function LeftRealmsPanel({
 							hapticTap()
 							onCreateRealm()
 						}}
-						className="w-12 h-12 rounded-2xl bg-[#083d29] hover:bg-[#0b5237] text-[#cedb9c] ring-1 ring-[#cedb9c]/40 flex items-center justify-center transition cursor-pointer shrink-0"
+						className="w-12 h-12 rounded-2xl bg-[#031f14] hover:bg-[#052c1c] text-[#f2fbd0] ring-1 ring-[#cedb9c]/40 flex items-center justify-center transition cursor-pointer shrink-0"
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
 							<line x1="12" y1="5" x2="12" y2="19" />
@@ -187,7 +187,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`relative aspect-square rounded-2xl p-2 flex items-center justify-center transition-all cursor-pointer ${
 										active
-											? 'bg-[#083d29] hover:bg-[#0b5237] ring-2 ring-[#cedb9c]'
+											? 'bg-[#031f14] hover:bg-[#052c1c] ring-2 ring-[#cedb9c]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
@@ -219,7 +219,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`group relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 text-center transition-all duration-200 cursor-pointer focus:outline-none ${
 										active
-											? 'bg-[#083d29] hover:bg-[#0b5237] ring-2 ring-[#cedb9c]'
+											? 'bg-[#031f14] hover:bg-[#052c1c] ring-2 ring-[#cedb9c]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
@@ -276,7 +276,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl transition cursor-pointer text-left ${
 										active
-											? 'bg-[#083d29] hover:bg-[#0b5237] ring-1 ring-[#cedb9c]/70 text-[#edf3d2]'
+											? 'bg-[#031f14] hover:bg-[#052c1c] ring-1 ring-[#cedb9c]/70 text-[#edf3d2]'
 											: 'bg-transparent hover:bg-[#2a241f] text-[#e5ebcd]'
 									}`}
 								>
@@ -320,7 +320,7 @@ export function LeftRealmsPanel({
 									className="w-9 h-9 rounded-full object-cover shrink-0"
 								/>
 							) : (
-								<div className="w-9 h-9 rounded-full bg-[#083d29] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
+								<div className="w-9 h-9 rounded-full bg-[#031f14] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
 									{session.user.display_name?.[0] || session.user.username?.[0]}
 								</div>
 							)}
