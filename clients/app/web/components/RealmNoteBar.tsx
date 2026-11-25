@@ -159,14 +159,14 @@ export function RealmNoteBar({ note, onEditNote }: RealmNoteBarProps) {
 	const canPlayAudio = Boolean(audioUrl)
 
 	return (
-		<div className="relative px-4 py-2 bg-[#121217] flex items-center justify-between gap-3">
+		<div className="relative px-4 py-2 bg-[#26211c] flex items-center justify-between gap-3">
 			{audioUrl && <audio ref={audioRef} src={audioUrl} preload="metadata" />}
 
 			<div className="flex items-center gap-2.5 min-w-0">
-				<span className="shrink-0 text-[11px] font-bold text-[#c4b5fd] bg-[#8b5cf6]/20 px-2.5 py-0.5 rounded-full">
+				<span className="shrink-0 text-[11px] font-bold text-[#cedb9c] bg-[#243e34] px-2.5 py-0.5 rounded-full">
 					Note
 				</span>
-				<p className="text-[14px] text-zinc-200 truncate font-editorial italic">
+				<p className="text-[14px] text-[#e5ebcd] truncate font-editorial italic">
 					“{note.text}”
 				</p>
 			</div>

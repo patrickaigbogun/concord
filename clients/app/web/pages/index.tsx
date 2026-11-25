@@ -46,13 +46,13 @@ const VIEW_MODE_KEY = 'concord_realms_view_mode_v2'
 const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏', '😂']
 
 const ORB_GRADIENTS = [
-	'from-violet-500 to-indigo-600',
-	'from-fuchsia-500 to-rose-500',
-	'from-cyan-500 to-blue-600',
-	'from-emerald-500 to-teal-600',
-	'from-amber-500 to-orange-600',
-	'from-pink-500 to-purple-600',
-	'from-sky-500 to-indigo-500',
+	'from-[#244438] to-[#172c24]',
+	'from-[#524236] to-[#372c24]',
+	'from-[#354c3a] to-[#233327]',
+	'from-[#284748] to-[#1a3031]',
+	'from-[#4b563c] to-[#323a28]',
+	'from-[#3e463b] to-[#282e26]',
+	'from-[#4d4136] to-[#332a22]',
 ]
 
 const DEFAULT_COVER =
@@ -822,7 +822,7 @@ export default function ConcordAppPage() {
 					e.preventDefault()
 				}
 			}}
-			className="h-[100dvh] w-full overflow-hidden bg-[#0a0a0e] text-zinc-100 flex relative select-none"
+			className="h-[100dvh] w-full overflow-hidden bg-[#1d1916] text-[#e5ebcd] flex relative select-none"
 		>
 			{/* LEFT PANEL: Visual Realms Grid */}
 			<div
@@ -863,21 +863,21 @@ export default function ConcordAppPage() {
 			)}
 
 			{/* CENTER STAGE: Active Space Conversation */}
-			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#0a0a0e] relative">
-				{/* iMessage-Style Centered Top Bar: Space Orb + Pill Name Underneath */}
+			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#1d1916] relative">
+				{/* Transparent Floating Top Bar: ONLY the Centered Floating Space Orb + Pill Name */}
 				{selectionMode ? (
-					<header className="px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between gap-3 shrink-0 bg-[#14141c]">
+					<header className="px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between gap-3 shrink-0 bg-[#241f1b] z-20">
 						<button
 							type="button"
 							onClick={() => {
 								setSelectionMode(false)
 								setSelectedMsgIds(new Set())
 							}}
-							className="text-[14px] font-semibold text-zinc-300 hover:text-white cursor-pointer"
+							className="text-[14px] font-semibold text-[#9e998c] hover:text-[#edf3d2] cursor-pointer"
 						>
 							Cancel
 						</button>
-						<span className="text-[15px] font-bold text-white">
+						<span className="text-[15px] font-bold text-[#edf3d2]">
 							{selectedMsgIds.size} selected
 						</span>
 						<button
@@ -889,108 +889,59 @@ export default function ConcordAppPage() {
 						</button>
 					</header>
 				) : (
-					<header className="px-4 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 flex items-center justify-between gap-2 shrink-0 bg-[#0d0d12]">
-						{/* Left: Realms Drawer Button (mobile) */}
-						<div className="w-10 flex items-center justify-start shrink-0">
-							<button
-								type="button"
-								onClick={() => {
-									hapticTap()
-									setMobilePane('left')
-								}}
-								className="lg:hidden w-10 h-10 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
-								aria-label="Open Realms"
-							>
-								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-									<rect x="3" y="3" width="7" height="7" rx="1.5" />
-									<rect x="14" y="3" width="7" height="7" rx="1.5" />
-									<rect x="3" y="14" width="7" height="7" rx="1.5" />
-									<rect x="14" y="14" width="7" height="7" rx="1.5" />
-								</svg>
-							</button>
-						</div>
-
-						{/* Center: Single Focal Component — Space Orb + Pill Name Underneath (iMessage Style) */}
+					<header className="pointer-events-none absolute top-0 inset-x-0 z-20 pt-[max(0.7rem,env(safe-area-inset-top))] pb-2 flex justify-center bg-transparent">
 						<button
 							type="button"
 							onClick={() => {
 								hapticTap()
 								setSpaceDrawerOpen(true)
 							}}
-							className="flex flex-col items-center gap-1 group cursor-pointer focus:outline-none min-w-0"
+							className="pointer-events-auto flex flex-col items-center gap-1 group cursor-pointer focus:outline-none"
 							title="Space details & persona"
 						>
 							<div className="relative">
 								<div
-									className={`w-11 h-11 rounded-full bg-gradient-to-br ${activeSpace.orbGradient} flex items-center justify-center text-[15px] font-bold text-white shadow-md group-hover:scale-105 transition`}
+									className={`w-11 h-11 rounded-full bg-gradient-to-br ${activeSpace.orbGradient} flex items-center justify-center text-[15px] font-bold text-[#edf3d2] shadow-lg shadow-black/45 group-hover:scale-105 transition`}
 								>
 									{activeSpace.name[0]}
 								</div>
 								{socketState === 'connected' && (
-									<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[#0d0d12]" />
+									<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#cedb9c] ring-2 ring-[#1d1916]" />
 								)}
 							</div>
-							<div className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#181822] group-hover:bg-[#222230] transition max-w-[200px]">
-								<span className="text-[13px] font-semibold text-white truncate">
+							<div className="inline-flex items-center gap-1 px-3.5 py-0.5 rounded-full bg-[#2a241f]/90 backdrop-blur-md shadow-md shadow-black/35 group-hover:bg-[#352e27] transition max-w-[200px]">
+								<span className="text-[13px] font-semibold text-[#edf3d2] truncate">
 									{activeSpace.name}
 								</span>
-								<svg
-									className="w-3 h-3 text-zinc-400 shrink-0"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2.4"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<polyline points="9 18 15 12 9 6" />
-								</svg>
 							</div>
 						</button>
-
-						{/* Right: Space Media Hub Button (mobile) */}
-						<div className="w-10 flex items-center justify-end shrink-0">
-							<button
-								type="button"
-								onClick={() => {
-									hapticTap()
-									setMobilePane((p) => (p === 'right' ? 'center' : 'right'))
-								}}
-								className="lg:hidden w-10 h-10 rounded-full text-zinc-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
-								aria-label="Open Space media and files"
-							>
-								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<rect x="3" y="3" width="18" height="18" rx="3" />
-									<circle cx="8.5" cy="8.5" r="1.5" />
-									<path d="M21 15l-5-5L5 21" />
-								</svg>
-							</button>
-						</div>
 					</header>
 				)}
 
-				{/* Curator's Realm Note Bar */}
-				<RealmNoteBar
-					note={activeRealm.note}
-					onEditNote={() => setNoteModalOpen(true)}
-				/>
-
 				{/* Toast Feedback */}
 				{toastMsg && (
-					<div className="pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-white text-black text-[13px] font-bold shadow-xl">
+					<div className="pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-[#cedb9c] text-[#1d1916] text-[13px] font-bold shadow-xl">
 						{toastMsg}
 					</div>
 				)}
 
-				{/* Conversation Stream */}
-				<div className="flex-1 overflow-y-auto px-3.5 md:px-8 py-4">
+				{/* Conversation Stream (Generous Reading Width + Scrolls Smoothly Beneath Transparent Header) */}
+				<div className="flex-1 overflow-y-auto px-2.5 md:px-6 pt-[calc(5.2rem+env(safe-area-inset-top))] pb-4">
 					<div className="max-w-2xl mx-auto flex flex-col">
+						{/* Curator's Realm Note Pill tucked cleanly at top of stream */}
+						<div className="mb-3 rounded-2xl overflow-hidden">
+							<RealmNoteBar
+								note={activeRealm.note}
+								onEditNote={() => setNoteModalOpen(true)}
+							/>
+						</div>
+
 						{messages.length === 0 ? (
 							<div className="text-center py-20 space-y-2">
-								<div className="text-[18px] font-editorial italic text-zinc-400">
+								<div className="text-[18px] font-editorial italic text-[#9e998c]">
 									“{activeSpace.name}” is quiet.
 								</div>
-								<p className="text-[14px] text-zinc-500">Write the first line below.</p>
+								<p className="text-[14px] text-[#7a7569]">Write the first line below.</p>
 							</div>
 						) : (
 							messages.map((msg, idx) => {
@@ -1023,22 +974,22 @@ export default function ConcordAppPage() {
 											}
 										}}
 										className={`group relative flex flex-col rounded-2xl transition-colors ${
-											isSelected ? 'bg-[#8b5cf6]/15 px-2 py-1' : ''
+											isSelected ? 'bg-[#cedb9c]/12 px-1.5 py-1' : ''
 										} ${msg.isSelf ? 'items-end' : 'items-start'} ${
 											idx === 0 ? '' : sameAuthorAsPrev ? 'mt-1.5' : 'mt-4'
 										}`}
 									>
 										<div
-											className={`flex items-end gap-3 max-w-[92%] md:max-w-[80%] ${
-												msg.isSelf ? 'flex-row-reverse pr-2.5' : 'flex-row'
+											className={`flex items-end gap-2 w-full ${
+												msg.isSelf ? 'justify-end pr-2' : 'justify-start'
 											}`}
 										>
 											{selectionMode && (
 												<span
 													className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mb-2 ${
 														isSelected
-															? 'bg-[#8b5cf6] border-[#8b5cf6] text-white'
-															: 'border-zinc-500'
+															? 'bg-[#cedb9c] border-[#cedb9c] text-[#1d1916]'
+															: 'border-[#7a7569]'
 													}`}
 												>
 													{isSelected && (
@@ -1050,16 +1001,16 @@ export default function ConcordAppPage() {
 											)}
 
 											{!msg.isSelf && (
-												<div className="w-9 h-9 shrink-0 mb-0.5">
+												<div className="w-7 h-7 shrink-0 mb-0.5">
 													{isLastInGroup ? (
 														avatarUrl ? (
 															<img
 																src={avatarUrl}
 																alt={msg.authorName}
-																className="w-9 h-9 rounded-full object-cover"
+																className="w-7 h-7 rounded-full object-cover"
 															/>
 														) : (
-															<div className="w-9 h-9 rounded-full bg-[#242433] text-zinc-200 flex items-center justify-center text-[14px] font-bold">
+															<div className="w-7 h-7 rounded-full bg-[#2f2923] text-[#e5ebcd] flex items-center justify-center text-[12px] font-bold">
 																{msg.authorName?.[0]?.toUpperCase() || '?'}
 															</div>
 														)
@@ -1067,24 +1018,24 @@ export default function ConcordAppPage() {
 												</div>
 											)}
 
-											{/* Comic Speech Bubble */}
+											{/* Expressive Comic Speech Bubble (Wide, Comfortable Reading Space) */}
 											<div
-												className={`relative rounded-[22px] px-4 py-2.5 text-[16px] leading-[1.45] ${
+												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#6d28d9] text-white'
-														: 'bg-[#17171f] text-zinc-100'
+														? 'bg-[#243e34] text-[#edf3d2]'
+														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#6d28d9' : '#17171f'}
+														color={msg.isSelf ? '#243e34' : '#2d2722'}
 													/>
 												)}
 
 												{msg.replyTo && (
-													<div className="mb-2 pl-2.5 border-l-2 border-white/40 text-[13px] text-white/75">
-														<span className="font-semibold text-white">{msg.replyTo.authorName}: </span>
+													<div className="mb-2 pl-2.5 border-l-2 border-[#cedb9c]/65 text-[13px] text-[#cedb9c]/85">
+														<span className="font-semibold text-[#edf3d2]">{msg.replyTo.authorName}: </span>
 														<span className="italic">{msg.replyTo.excerpt}</span>
 													</div>
 												)}
@@ -1108,7 +1059,7 @@ export default function ConcordAppPage() {
 
 												{msg.attachment && msg.attachment.kind === 'audio' && safeMediaUrl(msg.attachment.url) && (
 													<div data-no-pane-swipe="true" className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 space-y-1.5">
-														<div className="flex items-center justify-between gap-2 text-[13px] text-white/80">
+														<div className="flex items-center justify-between gap-2 text-[13px] text-[#e5ebcd]/85">
 															<span className="truncate font-medium">{msg.attachment.filename}</span>
 															<span className="text-[11px] shrink-0">Voice</span>
 														</div>
@@ -1122,9 +1073,9 @@ export default function ConcordAppPage() {
 												)}
 
 												{msg.attachment && msg.attachment.kind === 'doc' && (
-													<div className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 text-[14px] flex items-center justify-between gap-3">
+													<div className="mb-1.5 rounded-xl bg-black/20 px-3 py-2 text-[14px] flex items-center justify-between gap-3">
 														<span className="font-mono truncate">{msg.attachment.filename}</span>
-														<span className="text-[12px] font-semibold shrink-0">Doc</span>
+														<span className="text-[12px] font-semibold text-[#cedb9c] shrink-0">Doc</span>
 													</div>
 												)}
 
@@ -1136,20 +1087,20 @@ export default function ConcordAppPage() {
 										{(isLastInGroup || isKept || isChecked) && (
 											<div
 												className={`flex items-center gap-2 mt-1 ${
-													msg.isSelf ? 'pr-3 justify-end' : 'pl-12 justify-start'
+													msg.isSelf ? 'pr-2.5 justify-end' : 'pl-9 justify-start'
 												}`}
 											>
 												{!msg.isSelf && isLastInGroup && (
-													<span className="text-[12px] font-semibold text-zinc-400">{msg.authorName}</span>
+													<span className="text-[12px] font-semibold text-[#b8b3a5]">{msg.authorName}</span>
 												)}
 												{isLastInGroup && (
-													<span className="text-[11px] text-zinc-500">{msg.createdAt}</span>
+													<span className="text-[11px] text-[#8a8478]">{msg.createdAt}</span>
 												)}
 												{isKept && (
-													<span className="text-[11px] font-semibold text-[#c4b5fd]">Kept</span>
+													<span className="text-[11px] font-semibold text-[#cedb9c]">Kept</span>
 												)}
 												{isChecked && (
-													<span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-400">
+													<span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#cedb9c]">
 														<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
 															<polyline points="20 6 9 17 4 12" />
 														</svg>
@@ -1160,7 +1111,7 @@ export default function ConcordAppPage() {
 										)}
 
 										{msg.reactions && msg.reactions.length > 0 && (
-											<div className={`flex gap-1.5 mt-1 ${msg.isSelf ? 'pr-3' : 'pl-12'}`}>
+											<div className={`flex gap-1.5 mt-1 ${msg.isSelf ? 'pr-2.5' : 'pl-9'}`}>
 												{msg.reactions.map((r) => (
 													<button
 														key={r.emoji}
@@ -1171,8 +1122,8 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#8b5cf6]/30 text-white'
-																: 'bg-[#181820] text-zinc-200 hover:bg-[#22222d]'
+																? 'bg-[#243e34] text-[#edf3d2]'
+																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>
 														{r.emoji} {r.count}
@@ -1188,7 +1139,7 @@ export default function ConcordAppPage() {
 					</div>
 				</div>
 
-				{/* Collapsible Space Orb Bar (True Symmetric Upward Arch) */}
+				{/* Collapsible Space Orb Bar */}
 				<SpaceOrbBar
 					spaces={activeRealm.spaces}
 					activeSpaceId={activeSpace.id}
@@ -1199,15 +1150,15 @@ export default function ConcordAppPage() {
 
 				{/* Reply Highlight Banner */}
 				{replyTo && (
-					<div className="px-4 py-2 bg-[#161326] border-l-4 border-[#8b5cf6] flex items-center justify-between text-[14px] text-zinc-200">
+					<div className="px-4 py-2 bg-[#26211c] border-l-4 border-[#cedb9c] flex items-center justify-between text-[14px] text-[#e5ebcd]">
 						<div className="truncate">
-							Replying to <span className="text-white font-semibold">{replyTo.authorName}</span>: {replyTo.content}
+							Replying to <span className="text-[#edf3d2] font-semibold">{replyTo.authorName}</span>: {replyTo.content}
 						</div>
 						<button
 							type="button"
 							aria-label="Cancel reply"
 							onClick={() => setReplyTo(null)}
-							className="text-zinc-400 hover:text-white ml-3 p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0"
+							className="text-[#9e998c] hover:text-[#edf3d2] ml-3 p-1.5 rounded-full hover:bg-white/10 cursor-pointer shrink-0"
 						>
 							<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
 								<path d="M18 6L6 18" />
@@ -1217,11 +1168,11 @@ export default function ConcordAppPage() {
 					</div>
 				)}
 
-				{/* Message Composer */}
+				{/* Message Composer (Whipped Espresso Input Box + Pale Lichen Send Button) */}
 				<form
 					onSubmit={handleSendMessage}
-					className={`px-3 pt-2.5 bg-[#0e0e13] shrink-0 ${
-						openTray === 'none' ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-2.5'
+					className={`px-3 pt-2 bg-[#1d1916] shrink-0 ${
+						openTray === 'none' ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-2'
 					}`}
 				>
 					<div className="max-w-2xl mx-auto flex items-center gap-2 w-full">
@@ -1235,8 +1186,8 @@ export default function ConcordAppPage() {
 							}}
 							className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
 								openTray === 'media'
-									? 'bg-[#8b5cf6] text-white'
-									: 'bg-[#181820] text-zinc-300 hover:text-white'
+									? 'bg-[#cedb9c] text-[#1d1916]'
+									: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 							}`}
 						>
 							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -1246,8 +1197,8 @@ export default function ConcordAppPage() {
 						</button>
 
 						<div
-							className={`flex-1 min-w-0 flex items-center rounded-full bg-[#181820] pl-4 pr-1.5 py-1 transition-shadow ${
-								replyPulse || replyTo ? 'ring-2 ring-[#8b5cf6]' : ''
+							className={`flex-1 min-w-0 flex items-center rounded-full bg-[#2a241f] pl-4 pr-1.5 py-1 transition-shadow ${
+								replyPulse || replyTo ? 'ring-2 ring-[#cedb9c]' : ''
 							}`}
 						>
 							<input
@@ -1260,7 +1211,7 @@ export default function ConcordAppPage() {
 								}}
 								onChange={(e) => setDraft(e.target.value)}
 								placeholder={`Message ${activeSpace.name}…`}
-								className="flex-1 min-w-0 w-full bg-transparent py-2 text-[16px] text-white placeholder:text-zinc-500 focus:outline-none"
+								className="flex-1 min-w-0 w-full bg-transparent py-2 text-[16px] text-[#edf3d2] placeholder:text-[#8f897c] focus:outline-none"
 							/>
 							<button
 								type="button"
@@ -1272,8 +1223,8 @@ export default function ConcordAppPage() {
 								}}
 								className={`w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
 									openTray === 'stickers'
-										? 'bg-[#8b5cf6] text-white'
-										: 'text-zinc-400 hover:text-white hover:bg-white/10'
+										? 'bg-[#cedb9c] text-[#1d1916]'
+										: 'text-[#9e998c] hover:text-[#edf3d2] hover:bg-white/10'
 								}`}
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1289,7 +1240,7 @@ export default function ConcordAppPage() {
 							type="submit"
 							disabled={!draft.trim()}
 							aria-label="Send message"
-							className="w-11 h-11 rounded-full bg-white text-black hover:bg-zinc-200 disabled:bg-[#181820] disabled:text-zinc-600 flex items-center justify-center transition cursor-pointer shrink-0"
+							className="w-11 h-11 rounded-full bg-[#cedb9c] text-[#1d1916] hover:bg-[#dce7b0] disabled:bg-[#2a241f] disabled:text-[#6e695e] flex items-center justify-center transition cursor-pointer shrink-0"
 						>
 							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 								<line x1="12" y1="19" x2="12" y2="5" />

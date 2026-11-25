@@ -42,14 +42,14 @@ export function LeftRealmsPanel({
 	}, [realms, query])
 
 	return (
-		<aside className="h-full flex flex-col bg-[#0d0d11] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+		<aside className="h-full flex flex-col bg-[#221d19] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			{/* Centered Brand Header: Concord Logo + "Realms" Wordmark */}
 			<div className="px-5 pt-6 pb-4 flex flex-col items-center text-center gap-2 shrink-0">
-				<svg className="w-11 h-11 text-[#8b5cf6]" viewBox="0 0 100 100" fill="none" aria-label="Concord">
+				<svg className="w-11 h-11 text-[#cedb9c]" viewBox="0 0 100 100" fill="none" aria-label="Concord">
 					<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
 					<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
 				</svg>
-				<h1 className="text-[26px] font-bold tracking-tight text-white font-heading leading-none">
+				<h1 className="text-[26px] font-bold tracking-tight text-[#edf3d2] font-heading leading-none">
 					Realms
 				</h1>
 			</div>
@@ -58,7 +58,7 @@ export function LeftRealmsPanel({
 			<div className="px-4 pb-3.5 shrink-0">
 				<div className="relative">
 					<svg
-						className="w-5 h-5 text-zinc-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+						className="w-5 h-5 text-[#9e998c] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -72,14 +72,14 @@ export function LeftRealmsPanel({
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search realms…"
-						className="w-full rounded-full bg-[#171720] pl-12 pr-4 py-3 text-[16px] text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/60 transition"
+						className="w-full rounded-full bg-[#2c2621] pl-12 pr-4 py-3 text-[16px] text-[#edf3d2] placeholder:text-[#9e998c] focus:outline-none focus:ring-2 focus:ring-[#cedb9c]/60 transition"
 					/>
 				</div>
 			</div>
 
 			{/* Large, Prominent Grid View Toggles + Create Realm Button */}
 			<div className="px-4 pb-4 flex items-center gap-2.5 shrink-0">
-				<div className="flex-1 grid grid-cols-3 gap-1.5 rounded-2xl bg-[#16161f] p-1.5">
+				<div className="flex-1 grid grid-cols-3 gap-1.5 rounded-2xl bg-[#1b1714] p-1.5">
 					<button
 						type="button"
 						title="Orbs Grid"
@@ -90,8 +90,8 @@ export function LeftRealmsPanel({
 						}}
 						className={`py-2.5 rounded-xl flex items-center justify-center transition cursor-pointer ${
 							viewMode === 'grid-visual'
-								? 'bg-white/15 text-white shadow-sm'
-								: 'text-zinc-400 hover:text-zinc-200'
+								? 'bg-[#2f2923] text-[#edf3d2] shadow-sm'
+								: 'text-[#9e998c] hover:text-[#e5ebcd]'
 						}`}
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -117,8 +117,8 @@ export function LeftRealmsPanel({
 						}}
 						className={`py-2.5 rounded-xl flex items-center justify-center transition cursor-pointer ${
 							viewMode === 'grid-titled'
-								? 'bg-white/15 text-white shadow-sm'
-								: 'text-zinc-400 hover:text-zinc-200'
+								? 'bg-[#2f2923] text-[#edf3d2] shadow-sm'
+								: 'text-[#9e998c] hover:text-[#e5ebcd]'
 						}`}
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -139,8 +139,8 @@ export function LeftRealmsPanel({
 						}}
 						className={`py-2.5 rounded-xl flex items-center justify-center transition cursor-pointer ${
 							viewMode === 'list'
-								? 'bg-white/15 text-white shadow-sm'
-								: 'text-zinc-400 hover:text-zinc-200'
+								? 'bg-[#2f2923] text-[#edf3d2] shadow-sm'
+								: 'text-[#9e998c] hover:text-[#e5ebcd]'
 						}`}
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -160,7 +160,7 @@ export function LeftRealmsPanel({
 							hapticTap()
 							onCreateRealm()
 						}}
-						className="w-12 h-12 rounded-2xl bg-[#8b5cf6]/20 hover:bg-[#8b5cf6]/30 text-[#c4b5fd] hover:text-white flex items-center justify-center transition cursor-pointer shrink-0"
+						className="w-12 h-12 rounded-2xl bg-[#243e34] hover:bg-[#2d4d40] text-[#cedb9c] flex items-center justify-center transition cursor-pointer shrink-0"
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
 							<line x1="12" y1="5" x2="12" y2="19" />
@@ -170,7 +170,7 @@ export function LeftRealmsPanel({
 				)}
 			</div>
 
-			{/* Realms Grid (Ample Top/Bottom Padding so active ring is NEVER cut off!) */}
+			{/* Realms Grid */}
 			<div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pt-2 pb-6">
 				{viewMode === 'grid-visual' && (
 					<div className="grid grid-cols-3 gap-3 p-0.5">
@@ -187,8 +187,8 @@ export function LeftRealmsPanel({
 									}}
 									className={`relative aspect-square rounded-2xl p-2 flex items-center justify-center transition-all cursor-pointer ${
 										active
-											? 'bg-[#1d1830] ring-2 ring-[#8b5cf6]'
-											: 'bg-[#15151b] hover:bg-[#1b1b23]'
+											? 'bg-[#243e34] ring-2 ring-[#cedb9c]'
+											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
 									<img
@@ -197,7 +197,7 @@ export function LeftRealmsPanel({
 										className="w-12 h-12 rounded-full object-cover"
 									/>
 									{realm.unreadCount ? (
-										<span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
+										<span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#cedb9c]" />
 									) : null}
 								</button>
 							)
@@ -219,12 +219,12 @@ export function LeftRealmsPanel({
 									}}
 									className={`group relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 text-center transition-all duration-200 cursor-pointer focus:outline-none ${
 										active
-											? 'bg-[#1d1830] ring-2 ring-[#8b5cf6]'
-											: 'bg-[#15151b] hover:bg-[#1b1b23]'
+											? 'bg-[#243e34] ring-2 ring-[#cedb9c]'
+											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
 									{realm.unreadCount ? (
-										<span className="absolute top-2.5 right-2.5 min-w-5 h-5 px-1.5 rounded-full bg-[#8b5cf6] text-[11px] font-bold text-white flex items-center justify-center">
+										<span className="absolute top-2.5 right-2.5 min-w-5 h-5 px-1.5 rounded-full bg-[#cedb9c] text-[11px] font-bold text-[#1d1916] flex items-center justify-center">
 											{realm.unreadCount}
 										</span>
 									) : null}
@@ -238,7 +238,7 @@ export function LeftRealmsPanel({
 										{realm.note ? (
 											<span
 												title={`Note: ${realm.note.text}`}
-												className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-[#15151b]"
+												className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#cedb9c] ring-2 ring-[#2a241f]"
 											/>
 										) : null}
 									</div>
@@ -246,12 +246,12 @@ export function LeftRealmsPanel({
 									<div className="w-full space-y-0.5">
 										<div
 											className={`text-[14px] font-semibold truncate transition ${
-												active ? 'text-white' : 'text-zinc-200 group-hover:text-white'
+												active ? 'text-[#edf3d2]' : 'text-[#e5ebcd]'
 											}`}
 										>
 											{realm.name}
 										</div>
-										<div className="text-[12px] text-zinc-500 truncate">
+										<div className="text-[12px] text-[#9e998c] truncate">
 											{realm.isDirect ? 'Direct' : `${realm.spaces.length} spaces`}
 										</div>
 									</div>
@@ -275,8 +275,8 @@ export function LeftRealmsPanel({
 									}}
 									className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl transition cursor-pointer text-left ${
 										active
-											? 'bg-[#1d1830] text-white'
-											: 'bg-transparent hover:bg-[#16161c] text-zinc-300'
+											? 'bg-[#243e34] text-[#edf3d2]'
+											: 'bg-transparent hover:bg-[#2a241f] text-[#e5ebcd]'
 									}`}
 								>
 									<img
@@ -285,13 +285,13 @@ export function LeftRealmsPanel({
 										className="w-11 h-11 rounded-full object-cover shrink-0"
 									/>
 									<div className="min-w-0 flex-1">
-										<div className="text-[15px] font-semibold truncate text-white">{realm.name}</div>
-										<div className="text-[13px] text-zinc-400 truncate">
+										<div className="text-[15px] font-semibold truncate text-[#edf3d2]">{realm.name}</div>
+										<div className="text-[13px] text-[#9e998c] truncate">
 											{realm.isDirect ? 'Direct' : `${realm.spaces.length} spaces`}
 										</div>
 									</div>
 									{realm.unreadCount ? (
-										<span className="min-w-6 h-6 px-2 rounded-full bg-[#8b5cf6] text-[12px] font-bold text-white flex items-center justify-center">
+										<span className="min-w-6 h-6 px-2 rounded-full bg-[#cedb9c] text-[12px] font-bold text-[#1d1916] flex items-center justify-center">
 											{realm.unreadCount}
 										</span>
 									) : null}
@@ -302,10 +302,10 @@ export function LeftRealmsPanel({
 				)}
 			</div>
 
-			{/* Bottom Row: Sign In Pill + Settings Button Sharing the Same Row */}
-			<div className="px-4 py-3.5 bg-[#0a0a0e] flex items-center gap-2.5 shrink-0">
+			{/* Bottom Row: Sign In Pill + Settings Button */}
+			<div className="px-4 py-3.5 bg-[#1b1714] flex items-center gap-2.5 shrink-0">
 				{session ? (
-					<div className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-full bg-[#16161f] pl-2 pr-3 py-1.5">
+					<div className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-full bg-[#2a241f] pl-2 pr-3 py-1.5">
 						<a
 							href={`${CONCORD_CONFIG.idUrl}/profile`}
 							target="_blank"
@@ -319,21 +319,21 @@ export function LeftRealmsPanel({
 									className="w-9 h-9 rounded-full object-cover shrink-0"
 								/>
 							) : (
-								<div className="w-9 h-9 rounded-full bg-[#8b5cf6] flex items-center justify-center text-[14px] font-bold text-white shrink-0">
+								<div className="w-9 h-9 rounded-full bg-[#243e34] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
 									{session.user.display_name?.[0] || session.user.username?.[0]}
 								</div>
 							)}
 							<div className="min-w-0">
-								<div className="text-[14px] font-semibold text-white truncate">
+								<div className="text-[14px] font-semibold text-[#edf3d2] truncate">
 									{session.user.display_name}
 								</div>
-								<div className="text-[12px] text-zinc-400 truncate">@{session.user.username}</div>
+								<div className="text-[12px] text-[#9e998c] truncate">@{session.user.username}</div>
 							</div>
 						</a>
 						<button
 							type="button"
 							onClick={onSignOut}
-							className="text-[12px] font-semibold text-zinc-400 hover:text-white px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/12 transition cursor-pointer shrink-0"
+							className="text-[12px] font-semibold text-[#9e998c] hover:text-[#edf3d2] px-2.5 py-1 rounded-full bg-[#1d1916] transition cursor-pointer shrink-0"
 						>
 							Out
 						</button>
@@ -345,7 +345,7 @@ export function LeftRealmsPanel({
 							hapticTap()
 							onSignIn()
 						}}
-						className="flex-1 py-3.5 px-5 rounded-full bg-white text-black hover:bg-zinc-200 text-[15px] font-bold transition cursor-pointer"
+						className="flex-1 py-3.5 px-5 rounded-full bg-[#cedb9c] text-[#1d1916] hover:bg-[#dce7b0] text-[15px] font-bold transition cursor-pointer"
 					>
 						Sign in
 					</button>
@@ -359,7 +359,7 @@ export function LeftRealmsPanel({
 					}}
 					aria-label="Settings"
 					title="Settings"
-					className="w-12 h-12 rounded-full bg-[#171720] hover:bg-[#222230] text-zinc-200 hover:text-white flex items-center justify-center transition cursor-pointer shrink-0"
+					className="w-12 h-12 rounded-full bg-[#2a241f] hover:bg-[#352e28] text-[#e5ebcd] flex items-center justify-center transition cursor-pointer shrink-0"
 				>
 					<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 						<circle cx="12" cy="12" r="3" />

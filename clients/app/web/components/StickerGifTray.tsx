@@ -99,7 +99,7 @@ export function StickerGifTray({
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className="bg-[#111116] px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] select-none"
+			className="bg-[#221d19] px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] select-none"
 		>
 			{/* Top Bar: Stickers | GIFs switch + Close */}
 			<div className="flex items-center justify-between gap-3 mb-3">

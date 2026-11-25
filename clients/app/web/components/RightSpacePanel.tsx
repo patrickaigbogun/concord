@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useEffect, useState } from 'react'
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react'
 import { safeHttpsUrl, safeMediaUrl, safeStorageUrl } from '../../lib/url'
 import type { FileAsset, Space } from '../../lib/types'
 
@@ -22,7 +22,7 @@ function renderInlineMarkdown(text: string): ReactNode[] {
 		const token = match[0]
 		if (token.startsWith('**') && token.endsWith('**')) {
 			nodes.push(
-				<strong key={`b-${match.index}`} className="font-semibold text-white">
+				<strong key={`b-${match.index}`} className="font-semibold text-[#f3f7dc]">
 					{token.slice(2, -2)}
 				</strong>
 			)
@@ -30,7 +30,7 @@ function renderInlineMarkdown(text: string): ReactNode[] {
 			nodes.push(
 				<code
 					key={`c-${match.index}`}
-					className="px-1.5 py-0.5 rounded bg-white/10 text-[#c4b5fd] font-mono text-[0.9em]"
+					className="px-1.5 py-0.5 rounded bg-[#1d1916] text-[#cedb9c] font-mono text-[0.9em]"
 				>
 					{token.slice(1, -1)}
 				</code>
@@ -58,7 +58,7 @@ function SafeMarkdown({ content }: { content: string }) {
 		}
 		if (trimmed.startsWith('### ')) {
 			blocks.push(
-				<h4 key={`h3-${i}`} className="text-[16px] font-bold text-white mt-3 first:mt-0">
+				<h4 key={`h3-${i}`} className="text-[16px] font-bold text-[#f3f7dc] mt-3 first:mt-0">
 					{renderInlineMarkdown(trimmed.slice(4))}
 				</h4>
 			)
@@ -67,7 +67,7 @@ function SafeMarkdown({ content }: { content: string }) {
 		}
 		if (trimmed.startsWith('## ')) {
 			blocks.push(
-				<h3 key={`h2-${i}`} className="text-[17px] font-bold text-white mt-4 first:mt-0">
+				<h3 key={`h2-${i}`} className="text-[17px] font-bold text-[#f3f7dc] mt-4 first:mt-0">
 					{renderInlineMarkdown(trimmed.slice(3))}
 				</h3>
 			)
@@ -76,7 +76,7 @@ function SafeMarkdown({ content }: { content: string }) {
 		}
 		if (trimmed.startsWith('# ')) {
 			blocks.push(
-				<h2 key={`h1-${i}`} className="text-[19px] font-bold text-white mt-4 first:mt-0">
+				<h2 key={`h1-${i}`} className="text-[19px] font-bold text-[#f3f7dc] mt-4 first:mt-0">
 					{renderInlineMarkdown(trimmed.slice(2))}
 				</h2>
 			)
@@ -92,7 +92,7 @@ function SafeMarkdown({ content }: { content: string }) {
 			blocks.push(
 				<blockquote
 					key={`q-${i}`}
-					className="pl-3.5 border-l-2 border-[#8b5cf6]/70 text-zinc-300 italic font-editorial text-[15px] leading-relaxed"
+					className="pl-3.5 border-l-2 border-[#cedb9c]/70 text-[#d8e1bc] italic font-editorial text-[15px] leading-relaxed"
 				>
 					{quoteLines.map((ql, idx) => (
 						<Fragment key={idx}>
@@ -111,7 +111,7 @@ function SafeMarkdown({ content }: { content: string }) {
 				i++
 			}
 			blocks.push(
-				<ul key={`ul-${i}`} className="list-disc pl-5 space-y-1.5 text-[15px] text-zinc-200 leading-relaxed">
+				<ul key={`ul-${i}`} className="list-disc pl-5 space-y-1.5 text-[15px] text-[#e5ebcd] leading-relaxed">
 					{items.map((item, idx) => (
 						<li key={idx}>{renderInlineMarkdown(item)}</li>
 					))}
@@ -131,7 +131,7 @@ function SafeMarkdown({ content }: { content: string }) {
 			i++
 		}
 		blocks.push(
-			<p key={`p-${i}`} className="text-[15px] leading-relaxed text-zinc-200">
+			<p key={`p-${i}`} className="text-[15px] leading-relaxed text-[#e5ebcd]">
 				{renderInlineMarkdown(paraLines.join(' '))}
 			</p>
 		)
@@ -148,9 +148,6 @@ function isMarkdownDoc(doc: FileAsset): boolean {
 	return doc.contentType === 'text/markdown' || /\.(md|markdown)$/i.test(doc.filename)
 }
 
-/**
- * Human-friendly file format label (never raw MIME types like "text/markdown").
- */
 function friendlyFormatLabel(doc: FileAsset): string {
 	const name = doc.filename.toLowerCase()
 	const ct = (doc.contentType || '').toLowerCase()
@@ -219,24 +216,24 @@ function CodeViewer({ doc }: { doc: FileAsset }) {
 	return (
 		<div className="space-y-2.5" data-no-pane-swipe="true">
 			<div className="flex items-center justify-between gap-2">
-				<span className="text-[12px] text-zinc-400">{lines.length} lines</span>
+				<span className="text-[12px] text-[#9e998c]">{lines.length} lines</span>
 				<button
 					type="button"
 					onClick={handleCopy}
-					className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[13px] font-medium text-zinc-100 transition cursor-pointer"
+					className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2c2621] hover:bg-[#37302a] text-[13px] font-medium text-[#e5ebcd] transition cursor-pointer"
 				>
 					<span>{copied ? 'Copied' : 'Copy'}</span>
 				</button>
 			</div>
 
-			<div className="rounded-2xl bg-[#09090d] overflow-x-auto max-h-[420px] overflow-y-auto">
+			<div className="rounded-2xl bg-[#191512] overflow-x-auto max-h-[420px] overflow-y-auto">
 				<div className="py-3 font-mono text-[13px] leading-relaxed min-w-max">
 					{lines.map((line, idx) => (
 						<div key={idx} className="flex hover:bg-white/[0.04] px-3">
-							<span className="w-8 pr-3 text-right select-none text-zinc-600 shrink-0">
+							<span className="w-8 pr-3 text-right select-none text-[#7a7569] shrink-0">
 								{idx + 1}
 							</span>
-							<span className="text-zinc-200 whitespace-pre">{line || ' '}</span>
+							<span className="text-[#e5ebcd] whitespace-pre">{line || ' '}</span>
 						</div>
 					))}
 				</div>
@@ -245,65 +242,127 @@ function CodeViewer({ doc }: { doc: FileAsset }) {
 	)
 }
 
-function PdfViewer({ doc, onExpand }: { doc: FileAsset; onExpand: () => void }) {
-	const verifiedUrl = safeStorageUrl(doc.url, true)
-	const [useCompatViewer, setUseCompatViewer] = useState(() => {
-		if (typeof navigator === 'undefined') return false
-		return /android/i.test(navigator.userAgent)
-	})
+/**
+ * Native in-app PDF.js Canvas Reader.
+ * Works directly on Android WebView, Android Chrome, iOS Safari, and Desktop
+ * for BOTH local blob: uploads and remote Concord R2 PDFs (zero blank iframes!).
+ */
+function PdfCanvasReader({
+	url,
+	maxPages = 12,
+	compact = false,
+}: {
+	url: string
+	maxPages?: number
+	compact?: boolean
+}) {
+	const containerRef = useRef<HTMLDivElement>(null)
+	const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+	const [pageCount, setPageCount] = useState(0)
+	const [renderedPages, setRenderedPages] = useState(0)
+	const [errText, setErrText] = useState<string | null>(null)
 
-	if (!verifiedUrl) {
-		return (
-			<div className="rounded-xl bg-white/[0.04] p-4 text-[14px] text-zinc-400">
-				PDF preview is enabled for verified Concord R2 files and local uploads.
-			</div>
-		)
-	}
+	useEffect(() => {
+		let cancelled = false
+		const container = containerRef.current
+		if (!container) return
+		container.innerHTML = ''
+		setStatus('loading')
+		setPageCount(0)
+		setRenderedPages(0)
+		setErrText(null)
 
-	const isRemoteHttps = verifiedUrl.startsWith('https://')
-	const frameSrc =
-		useCompatViewer && isRemoteHttps
-			? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(verifiedUrl)}`
-			: `${verifiedUrl}#toolbar=1&view=FitH`
+		;(async () => {
+			try {
+				const pdfjs = await import('pdfjs-dist')
+				if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+					pdfjs.GlobalWorkerOptions.workerSrc =
+						'https://unpkg.com/pdfjs-dist@6.5.438/build/pdf.worker.min.mjs'
+				}
+
+				const loadingTask = pdfjs.getDocument({ url, withCredentials: false })
+				const pdf = await loadingTask.promise
+				if (cancelled) {
+					void loadingTask.destroy()
+					return
+				}
+
+				const total = pdf.numPages
+				const limit = Math.min(total, maxPages)
+				setPageCount(total)
+				setStatus('ready')
+
+				const targetWidth = Math.max(260, (container.clientWidth || 320) - 4)
+				const dpr = Math.min(window.devicePixelRatio || 1, 2)
+
+				for (let p = 1; p <= limit; p++) {
+					if (cancelled) break
+					const page = await pdf.getPage(p)
+					const baseViewport = page.getViewport({ scale: 1 })
+					const scale = targetWidth / baseViewport.width
+					const viewport = page.getViewport({ scale: scale * dpr })
+
+					const canvas = document.createElement('canvas')
+					canvas.width = Math.floor(viewport.width)
+					canvas.height = Math.floor(viewport.height)
+					canvas.style.width = '100%'
+					canvas.style.height = 'auto'
+					canvas.style.display = 'block'
+					canvas.style.borderRadius = '12px'
+					canvas.style.marginBottom = '10px'
+					canvas.style.background = '#ffffff'
+
+					const ctx = canvas.getContext('2d')
+					if (ctx) {
+						await page.render({ canvasContext: ctx, canvas, viewport }).promise
+						if (!cancelled && containerRef.current) {
+							containerRef.current.appendChild(canvas)
+							setRenderedPages(p)
+						}
+					}
+				}
+			} catch (err) {
+				if (!cancelled) {
+					setStatus('error')
+					setErrText(err instanceof Error ? err.message : 'Unable to render PDF')
+				}
+			}
+		})()
+
+		return () => {
+			cancelled = true
+		}
+	}, [url, maxPages])
 
 	return (
-		<div className="space-y-3" data-no-pane-swipe="true">
-			<div className="relative rounded-2xl overflow-hidden bg-white">
-				<iframe
-					src={frameSrc}
-					title={doc.filename}
-					sandbox="allow-scripts allow-same-origin"
-					referrerPolicy="no-referrer"
-					className="w-full h-[420px]"
-				/>
-			</div>
+		<div className="space-y-2.5" data-no-pane-swipe="true">
+			{status === 'loading' && (
+				<div className="rounded-2xl bg-[#1d1916] p-6 text-center text-[14px] text-[#9e998c]">
+					Rendering PDF pages…
+				</div>
+			)}
 
-			<div className="flex flex-wrap items-center gap-2">
-				<button
-					type="button"
-					onClick={onExpand}
-					className="flex-1 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-[13px] font-bold transition cursor-pointer"
-				>
-					Full Screen
-				</button>
-				<a
-					href={verifiedUrl}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-[13px] font-semibold text-white transition"
-				>
-					Open
-				</a>
-				{isRemoteHttps && (
-					<button
-						type="button"
-						onClick={() => setUseCompatViewer((v) => !v)}
-						className="px-3 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/12 text-[12px] font-medium text-zinc-300 transition cursor-pointer"
-					>
-						{useCompatViewer ? 'Native' : 'Mobile Mode'}
-					</button>
-				)}
-			</div>
+			{status === 'error' && (
+				<div className="rounded-2xl bg-[#1d1916] p-4 space-y-2 text-[14px] text-[#e5ebcd]">
+					<div className="font-semibold">Could not render inline preview</div>
+					<div className="text-[12px] text-[#9e998c]">{errText}</div>
+				</div>
+			)}
+
+			{pageCount > 0 && (
+				<div className="flex items-center justify-between text-[12px] text-[#9e998c]">
+					<span>
+						Showing {renderedPages} of {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+					</span>
+				</div>
+			)}
+
+			<div
+				ref={containerRef}
+				className={`w-full overflow-y-auto no-scrollbar rounded-2xl ${
+					compact ? 'max-h-[420px]' : 'flex-1'
+				}`}
+			/>
 		</div>
 	)
 }
@@ -336,26 +395,27 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 		return () => window.removeEventListener('keydown', onKeyDown)
 	}, [lightboxImage, fullscreenPdf])
 
+	const openPdfUrl = openDoc && isPdfDoc(openDoc) ? safeStorageUrl(openDoc.url, true) : null
 	const fullscreenPdfUrl = fullscreenPdf ? safeStorageUrl(fullscreenPdf.url, true) : null
 
 	return (
-		<aside className="h-full flex flex-col bg-[#0d0d11] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-			{/* Space Header (No wasted Back button — swipe to close) */}
+		<aside className="h-full flex flex-col bg-[#221d19] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+			{/* Space Header (No Back button — swipe to close) */}
 			<div className="px-4 pt-4 pb-3 flex items-center gap-3">
 				<div
-					className={`w-10 h-10 rounded-full bg-gradient-to-br ${space.orbGradient} shrink-0 flex items-center justify-center text-[15px] font-bold text-white`}
+					className={`w-10 h-10 rounded-full bg-gradient-to-br ${space.orbGradient} shrink-0 flex items-center justify-center text-[15px] font-bold text-[#edf3d2]`}
 				>
 					{space.name[0]}
 				</div>
 				<div className="min-w-0">
-					<h2 className="text-[18px] font-bold text-white truncate font-heading">{space.name}</h2>
-					<p className="text-[13px] text-zinc-400 truncate">{space.description || 'Shared in Space'}</p>
+					<h2 className="text-[18px] font-bold text-[#edf3d2] truncate font-heading">{space.name}</h2>
+					<p className="text-[13px] text-[#9e998c] truncate">{space.description || 'Shared in Space'}</p>
 				</div>
 			</div>
 
-			{/* 3 Clean Tabs: Media | Docs | Links (No item counts in tab labels!) */}
+			{/* 3 Clean Tabs: Media | Docs | Links */}
 			<div className="px-4 pb-3.5">
-				<div className="grid grid-cols-3 gap-1 bg-[#16161c] p-1 rounded-2xl">
+				<div className="grid grid-cols-3 gap-1 bg-[#1b1714] p-1 rounded-2xl">
 					{(
 						[
 							['media', 'Media'],
@@ -371,7 +431,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 								setOpenDoc(null)
 							}}
 							className={`py-2 rounded-xl text-[14px] font-semibold transition cursor-pointer ${
-								tab === key ? 'bg-white/14 text-white' : 'text-zinc-400 hover:text-zinc-200'
+								tab === key ? 'bg-[#2f2923] text-[#edf3d2]' : 'text-[#9e998c] hover:text-[#e5ebcd]'
 							}`}
 						>
 							{label}
@@ -388,34 +448,52 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 							<button
 								type="button"
 								onClick={() => setOpenDoc(null)}
-								className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#c4b5fd] hover:text-white cursor-pointer"
+								className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[#cedb9c] hover:text-[#edf3d2] cursor-pointer"
 							>
 								<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
 									<path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
 								</svg>
 								<span>All docs</span>
 							</button>
-							{safeMediaUrl(openDoc.url) && (
-								<a
-									href={safeMediaUrl(openDoc.url) ?? undefined}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-[13px] font-semibold text-zinc-400 hover:text-white"
-								>
-									Open
-								</a>
-							)}
+							<div className="flex items-center gap-2">
+								{openPdfUrl && (
+									<button
+										type="button"
+										onClick={() => setFullscreenPdf(openDoc)}
+										className="px-3 py-1 rounded-full bg-[#cedb9c] text-[#1d1916] text-[12px] font-bold cursor-pointer"
+									>
+										Full Screen
+									</button>
+								)}
+								{safeMediaUrl(openDoc.url) && (
+									<a
+										href={safeMediaUrl(openDoc.url) ?? undefined}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-[13px] font-semibold text-[#9e998c] hover:text-[#edf3d2]"
+									>
+										Open
+									</a>
+								)}
+							</div>
 						</div>
 
-						<div className="rounded-2xl bg-[#15151b] p-4 space-y-3">
-							<div className="text-[16px] font-semibold text-white truncate">{openDoc.filename}</div>
-							<div className="text-[13px] text-zinc-400">
+						{/* Espresso & Lichen Document Reader Card */}
+						<div className="rounded-2xl bg-[#2a241f] p-4 space-y-3">
+							<div className="text-[16px] font-semibold text-[#edf3d2] truncate">{openDoc.filename}</div>
+							<div className="text-[13px] text-[#9e998c]">
 								{friendlyFormatLabel(openDoc)} &bull; {formatFileSize(openDoc.sizeBytes)}
 							</div>
 
 							{isPdfDoc(openDoc) ? (
 								<div className="pt-2">
-									<PdfViewer doc={openDoc} onExpand={() => setFullscreenPdf(openDoc)} />
+									{openPdfUrl ? (
+										<PdfCanvasReader url={openPdfUrl} maxPages={8} compact />
+									) : (
+										<div className="rounded-xl bg-[#1d1916] p-4 text-[14px] text-[#9e998c]">
+											PDF preview is enabled for verified Concord R2 files and local uploads.
+										</div>
+									)}
 								</div>
 							) : isMarkdownDoc(openDoc) ? (
 								<div className="pt-2">
@@ -435,7 +513,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 						{tab === 'media' && (
 							<div className="grid grid-cols-2 gap-2.5">
 								{media.length === 0 ? (
-									<p className="col-span-2 text-[14px] text-zinc-500 text-center py-10">
+									<p className="col-span-2 text-[14px] text-[#9e998c] text-center py-10">
 										No media shared yet.
 									</p>
 								) : (
@@ -447,11 +525,11 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 												<div
 													key={item.id}
 													data-no-pane-swipe="true"
-													className="col-span-2 rounded-2xl bg-[#15151b] p-3.5 space-y-2"
+													className="col-span-2 rounded-2xl bg-[#2a241f] p-3.5 space-y-2"
 												>
 													<div className="flex items-center justify-between gap-2 text-[13px]">
-														<span className="font-semibold text-white truncate">{item.filename}</span>
-														<span className="text-[12px] text-[#c4b5fd] shrink-0">Audio</span>
+														<span className="font-semibold text-[#edf3d2] truncate">{item.filename}</span>
+														<span className="text-[12px] text-[#cedb9c] shrink-0">Audio</span>
 													</div>
 													<audio src={safeUrl} controls preload="metadata" className="w-full h-9" />
 												</div>
@@ -499,22 +577,22 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 						{tab === 'docs' && (
 							<div className="space-y-2.5">
 								{docs.length === 0 ? (
-									<p className="text-[14px] text-zinc-500 text-center py-10">No documents shared yet.</p>
+									<p className="text-[14px] text-[#9e998c] text-center py-10">No documents shared yet.</p>
 								) : (
 									docs.map((doc) => (
 										<button
 											key={doc.id}
 											type="button"
 											onClick={() => setOpenDoc(doc)}
-											className="w-full text-left rounded-2xl bg-[#15151b] hover:bg-[#1c1c24] p-4 transition cursor-pointer flex items-center justify-between gap-3"
+											className="w-full text-left rounded-2xl bg-[#2a241f] hover:bg-[#332c26] p-4 transition cursor-pointer flex items-center justify-between gap-3"
 										>
 											<div className="min-w-0">
-												<div className="text-[15px] font-semibold text-white truncate">{doc.filename}</div>
-												<div className="text-[13px] text-zinc-400 mt-0.5">
+												<div className="text-[15px] font-semibold text-[#edf3d2] truncate">{doc.filename}</div>
+												<div className="text-[13px] text-[#9e998c] mt-0.5">
 													{friendlyFormatLabel(doc)} &bull; {formatFileSize(doc.sizeBytes)}
 												</div>
 											</div>
-											<span className="text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 shrink-0">
+											<span className="text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-[#243e34] text-[#cedb9c] shrink-0">
 												{shortFormatBadge(doc)}
 											</span>
 										</button>
@@ -526,7 +604,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 						{tab === 'links' && (
 							<div className="space-y-2.5">
 								{links.length === 0 ? (
-									<p className="text-[14px] text-zinc-500 text-center py-10">No links collected yet.</p>
+									<p className="text-[14px] text-[#9e998c] text-center py-10">No links collected yet.</p>
 								) : (
 									links.map((l) => {
 										const safeLink = safeHttpsUrl(l.url)
@@ -537,10 +615,10 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 												href={safeLink}
 												target="_blank"
 												rel="noopener noreferrer"
-												className="block rounded-2xl bg-[#15151b] hover:bg-[#1c1c24] p-4 transition"
+												className="block rounded-2xl bg-[#2a241f] hover:bg-[#332c26] p-4 transition"
 											>
-												<div className="text-[14px] font-semibold text-[#a78bfa] truncate">{safeLink}</div>
-												<div className="text-[12px] text-zinc-500 mt-1">{l.createdAt}</div>
+												<div className="text-[14px] font-semibold text-[#cedb9c] truncate">{safeLink}</div>
+												<div className="text-[12px] text-[#9e998c] mt-1">{l.createdAt}</div>
 											</a>
 										)
 									})
@@ -551,19 +629,19 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 				)}
 			</div>
 
-			{/* Full-Screen PDF Reader Modal */}
+			{/* Full-Screen PDF.js Canvas Reader Modal */}
 			{fullscreenPdf && fullscreenPdfUrl && (
 				<div
 					role="dialog"
 					aria-modal="true"
 					aria-label={fullscreenPdf.filename}
 					data-no-pane-swipe="true"
-					className="fixed inset-0 z-50 bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+					className="fixed inset-0 z-50 bg-[#1d1916] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
 				>
-					<div className="px-4 py-3 bg-[#101015] flex items-center justify-between gap-3">
+					<div className="px-4 py-3 bg-[#241f1b] flex items-center justify-between gap-3 shrink-0">
 						<div className="min-w-0">
-							<div className="text-[15px] font-semibold text-white truncate">{fullscreenPdf.filename}</div>
-							<div className="text-[12px] text-zinc-400">
+							<div className="text-[15px] font-semibold text-[#edf3d2] truncate">{fullscreenPdf.filename}</div>
+							<div className="text-[12px] text-[#9e998c]">
 								PDF Document &bull; {formatFileSize(fullscreenPdf.sizeBytes)}
 							</div>
 						</div>
@@ -572,31 +650,24 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 								href={fullscreenPdfUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[13px] font-semibold text-white"
+								className="px-3.5 py-2 rounded-full bg-[#2f2923] hover:bg-[#3a322b] text-[13px] font-semibold text-[#e5ebcd]"
 							>
 								Open
 							</a>
 							<button
 								type="button"
 								onClick={() => setFullscreenPdf(null)}
-								className="px-3.5 py-2 rounded-xl bg-white text-black text-[13px] font-bold cursor-pointer"
+								className="px-4 py-2 rounded-full bg-[#cedb9c] text-[#1d1916] text-[13px] font-bold cursor-pointer"
 							>
 								Close
 							</button>
 						</div>
 					</div>
-					<iframe
-						src={
-							/android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') &&
-							fullscreenPdfUrl.startsWith('https://')
-								? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fullscreenPdfUrl)}`
-								: `${fullscreenPdfUrl}#toolbar=1&view=FitH`
-						}
-						title={fullscreenPdf.filename}
-						sandbox="allow-scripts allow-same-origin"
-						referrerPolicy="no-referrer"
-						className="flex-1 w-full bg-white"
-					/>
+					<div className="flex-1 overflow-y-auto px-3 py-4">
+						<div className="max-w-3xl mx-auto">
+							<PdfCanvasReader url={fullscreenPdfUrl} maxPages={50} />
+						</div>
+					</div>
 				</div>
 			)}
 
@@ -614,8 +685,8 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 						className="flex items-center justify-between gap-3 pb-3"
 					>
 						<div className="min-w-0">
-							<div className="text-[15px] font-semibold text-white truncate">{lightboxImage.filename}</div>
-							<div className="text-[13px] text-zinc-400">
+							<div className="text-[15px] font-semibold text-[#edf3d2] truncate">{lightboxImage.filename}</div>
+							<div className="text-[13px] text-[#9e998c]">
 								{formatFileSize(lightboxImage.sizeBytes)} &bull; {lightboxImage.createdAt}
 							</div>
 						</div>
@@ -625,7 +696,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 								download={lightboxImage.filename}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="px-3.5 py-2 rounded-xl bg-white/12 hover:bg-white/20 text-[13px] font-semibold text-white transition"
+								className="px-3.5 py-2 rounded-full bg-[#2a241f] hover:bg-[#352e28] text-[13px] font-semibold text-[#e5ebcd] transition"
 							>
 								Download
 							</a>
@@ -633,7 +704,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 								type="button"
 								onClick={() => setLightboxImage(null)}
 								aria-label="Close lightbox"
-								className="px-3.5 py-2 rounded-xl bg-white/12 hover:bg-white/20 text-[13px] font-semibold text-white transition cursor-pointer"
+								className="px-4 py-2 rounded-full bg-[#cedb9c] text-[#1d1916] text-[13px] font-bold transition cursor-pointer"
 							>
 								Close
 							</button>

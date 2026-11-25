@@ -17,12 +17,12 @@ export const INITIAL_REALMS: Realm[] = [
 			updatedAt: '12m ago',
 		},
 		spaces: [
-			{ id: 'sp-lounge', realmId: 'realm-folio', name: 'Words', slug: 'words', description: 'Open conversation for writers and artists', orbGradient: 'from-violet-600 to-indigo-700', kind: 'community' },
-			{ id: 'sp-drafts', realmId: 'realm-folio', name: 'Draft', slug: 'draft', description: 'Work-in-progress chapters & critiques', orbGradient: 'from-amber-500 to-orange-700', kind: 'community', unread: true },
-			{ id: 'sp-book-club', realmId: 'realm-folio', name: 'Book Club', slug: 'book-club', description: 'Weekly reading notes & annotations', orbGradient: 'from-emerald-500 to-teal-700', kind: 'community' },
-			{ id: 'sp-poetry', realmId: 'realm-folio', name: 'Verse', slug: 'verse', description: 'Short lines, fragments, and poems', orbGradient: 'from-rose-500 to-pink-700', kind: 'community' },
-			{ id: 'sp-research', realmId: 'realm-folio', name: 'Typography', slug: 'typography', description: 'Typefaces, print design, and layout', orbGradient: 'from-sky-500 to-blue-700', kind: 'community' },
-			{ id: 'sp-sound', realmId: 'realm-folio', name: 'Sound Space', slug: 'sound-space', description: 'Music & ambient tracks to write to', orbGradient: 'from-fuchsia-500 to-purple-700', kind: 'community' },
+			{ id: 'sp-lounge', realmId: 'realm-folio', name: 'Words', slug: 'words', description: 'Open conversation for writers and artists', orbGradient: 'from-[#244438] to-[#172c24]', kind: 'community' },
+			{ id: 'sp-drafts', realmId: 'realm-folio', name: 'Draft', slug: 'draft', description: 'Work-in-progress chapters & critiques', orbGradient: 'from-[#524236] to-[#372c24]', kind: 'community', unread: true },
+			{ id: 'sp-book-club', realmId: 'realm-folio', name: 'Book Club', slug: 'book-club', description: 'Weekly reading notes & annotations', orbGradient: 'from-[#354c3a] to-[#233327]', kind: 'community' },
+			{ id: 'sp-poetry', realmId: 'realm-folio', name: 'Verse', slug: 'verse', description: 'Short lines, fragments, and poems', orbGradient: 'from-[#284748] to-[#1a3031]', kind: 'community' },
+			{ id: 'sp-research', realmId: 'realm-folio', name: 'Typography', slug: 'typography', description: 'Typefaces, print design, and layout', orbGradient: 'from-[#4b563c] to-[#323a28]', kind: 'community' },
+			{ id: 'sp-sound', realmId: 'realm-folio', name: 'Sound Space', slug: 'sound-space', description: 'Music & ambient tracks to write to', orbGradient: 'from-[#3e463b] to-[#282e26]', kind: 'community' },
 		],
 	},
 	{
@@ -31,7 +31,7 @@ export const INITIAL_REALMS: Realm[] = [
 		slug: 'midnight-studio',
 		description: 'Visual design, architecture, and product craft.',
 		coverUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=600&q=80',
-		accentColor: '#38bdf8',
+		accentColor: '#cedb9c',
 		unreadCount: 1,
 		note: {
 			text: 'Sketching the spatial navigation interactions.',
@@ -39,9 +39,9 @@ export const INITIAL_REALMS: Realm[] = [
 			updatedAt: '1h ago',
 		},
 		spaces: [
-			{ id: 'sp-crit', realmId: 'realm-studio', name: 'Crit', slug: 'crit', description: 'Design critiques & motion studies', orbGradient: 'from-sky-500 to-cyan-700', kind: 'community' },
-			{ id: 'sp-motion', realmId: 'realm-studio', name: 'Motion Lab', slug: 'motion-lab', description: 'Physics, spring curves, and tactile UI', orbGradient: 'from-indigo-500 to-violet-700', kind: 'community' },
-			{ id: 'sp-refs', realmId: 'realm-studio', name: 'Mood', slug: 'mood', description: 'References & visual inspirations', orbGradient: 'from-teal-500 to-emerald-700', kind: 'community' },
+			{ id: 'sp-crit', realmId: 'realm-studio', name: 'Crit', slug: 'crit', description: 'Design critiques & motion studies', orbGradient: 'from-[#2a4a44] to-[#1b312d]', kind: 'community' },
+			{ id: 'sp-motion', realmId: 'realm-studio', name: 'Motion Lab', slug: 'motion-lab', description: 'Physics, spring curves, and tactile UI', orbGradient: 'from-[#4d4136] to-[#332a22]', kind: 'community' },
+			{ id: 'sp-refs', realmId: 'realm-studio', name: 'Mood', slug: 'mood', description: 'References & visual inspirations', orbGradient: 'from-[#3d4f3c] to-[#273427]', kind: 'community' },
 		],
 	},
 	{
@@ -49,10 +49,10 @@ export const INITIAL_REALMS: Realm[] = [
 		name: 'Patrick',
 		slug: 'dm-patrick',
 		coverUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-		accentColor: '#10b981',
+		accentColor: '#cedb9c',
 		isDirect: true,
 		spaces: [
-			{ id: 'sp-dm-patrick', realmId: 'realm-dm-patrick', name: 'Direct', slug: 'direct', description: 'Direct conversation with Patrick', orbGradient: 'from-emerald-600 to-teal-700', kind: 'direct' },
+			{ id: 'sp-dm-patrick', realmId: 'realm-dm-patrick', name: 'Direct', slug: 'direct', description: 'Direct conversation with Patrick', orbGradient: 'from-[#26463a] to-[#182e26]', kind: 'direct' },
 		],
 	},
 	{
@@ -61,10 +61,10 @@ export const INITIAL_REALMS: Realm[] = [
 		slug: 'analog-atelier',
 		description: 'Film photography, zines, and tactile notebooks.',
 		coverUrl: 'https://images.unsplash.com/photo-1495121553079-4c61bcce1894?auto=format&fit=crop&w=600&q=80',
-		accentColor: '#f59e0b',
+		accentColor: '#cedb9c',
 		spaces: [
-			{ id: 'sp-film', realmId: 'realm-atelier', name: '35mm', slug: '35mm', description: 'Film rolls & darkroom scans', orbGradient: 'from-amber-600 to-yellow-700', kind: 'community' },
-			{ id: 'sp-zines', realmId: 'realm-atelier', name: 'Zine Press', slug: 'zine-press', description: 'Independent print editions', orbGradient: 'from-orange-500 to-red-700', kind: 'community' },
+			{ id: 'sp-film', realmId: 'realm-atelier', name: '35mm', slug: '35mm', description: 'Film rolls & darkroom scans', orbGradient: 'from-[#544637] to-[#392f24]', kind: 'community' },
+			{ id: 'sp-zines', realmId: 'realm-atelier', name: 'Zine Press', slug: 'zine-press', description: 'Independent print editions', orbGradient: 'from-[#43523b] to-[#2c3727]', kind: 'community' },
 		],
 	},
 ]

@@ -501,7 +501,7 @@ export function AttachmentTray({
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className={`bg-[#111116] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
+			className={`bg-[#221d19] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
 				expanded ? 'h-[76dvh]' : 'h-[44dvh] min-h-[300px]'
 			}`}
 		>
@@ -787,7 +787,7 @@ export function AttachmentTray({
 
 			{/* Signal-Style Bottom Action Row (Gallery | File | Camera | Voice) */}
 			{!pendingImage && !pendingVideo && !pendingDoc && !voiceMode && (
-				<div className="px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-[#0d0d12] grid grid-cols-4 gap-3 shrink-0">
+				<div className="px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-[#1b1714] grid grid-cols-4 gap-3 shrink-0">
 					<button
 						type="button"
 						onClick={() => galleryInputRef.current?.click()}
