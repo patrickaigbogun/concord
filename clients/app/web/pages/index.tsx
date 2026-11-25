@@ -42,7 +42,7 @@ import { StickerGifTray } from '../components/StickerGifTray'
 
 export const metadata = { title: 'Concord' }
 
-const VIEW_MODE_KEY = 'concord_rooms_view_mode'
+const VIEW_MODE_KEY = 'concord_realms_view_mode_v2'
 const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏', '😂']
 
 const ORB_GRADIENTS = [
@@ -235,7 +235,8 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 
 export default function ConcordAppPage() {
 	const [session, setSession] = useState<ConcordSession | null>(null)
-	const [viewMode, setViewMode] = useState<RoomViewMode>('grid-titled')
+	const [viewMode, setViewMode] = useState<RoomViewMode>('grid-visual')
+	const [settingsOpen, setSettingsOpen] = useState(false)
 	const [realms, setRealms] = useState<Realm[]>(INITIAL_REALMS)
 	const [activeRealmId, setActiveRealmId] = useState(INITIAL_REALMS[0].id)
 	const [activeSpaceId, setActiveSpaceId] = useState(INITIAL_REALMS[0].spaces[0].id)
@@ -836,6 +837,7 @@ export default function ConcordAppPage() {
 					onChangeViewMode={handleChangeViewMode}
 					onSelectRealm={handleSelectRealm}
 					onCreateRealm={() => setCreateRealmOpen(true)}
+					onOpenSettings={() => setSettingsOpen(true)}
 					session={session}
 					onSignIn={() => startSignIn()}
 					onSignOut={() => {
@@ -1647,6 +1649,58 @@ export default function ConcordAppPage() {
 					onSave={handleSaveRealmNote}
 					onClose={() => setNoteModalOpen(false)}
 				/>
+			)}
+
+			{/* SETTINGS SHEET */}
+			{settingsOpen && (
+				<div
+					data-no-pane-swipe="true"
+					onClick={() => setSettingsOpen(false)}
+					className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="w-full max-w-sm rounded-3xl bg-[#14141c] p-5 space-y-4 shadow-2xl"
+					>
+						<div className="flex items-center justify-between">
+							<h3 className="text-[19px] font-bold text-white font-heading">Settings</h3>
+							<button
+								type="button"
+								onClick={() => setSettingsOpen(false)}
+								className="w-9 h-9 rounded-full bg-[#1d1d28] text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer"
+							>
+								<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+									<path d="M18 6L6 18" />
+									<path d="M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
+
+						<div className="space-y-2">
+							<a
+								href="https://id.dexx.systems/profile"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] hover:bg-[#232332] text-[15px] font-semibold text-white transition"
+							>
+								<span>Concord ID Profile</span>
+								<span className="text-[13px] text-zinc-400">Open</span>
+							</a>
+
+							<div className="flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] text-[15px] text-zinc-200">
+								<span className="font-semibold">Default Realms View</span>
+								<span className="text-[13px] text-[#c4b5fd] font-semibold">
+									{viewMode === 'grid-visual' ? 'Orbs' : viewMode === 'grid-titled' ? 'Cards' : 'List'}
+								</span>
+							</div>
+
+							<div className="flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] text-[15px] text-zinc-200">
+								<span className="font-semibold">Version</span>
+								<span className="text-[13px] text-zinc-400">Concord 0.1.0</span>
+							</div>
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	)
