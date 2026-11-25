@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getSession } from '../../lib/auth'
+import {
+	hasGalleryPermission,
+	hasNativeGallery,
+	loadNativeGallery,
+	readNativeMediaAsFile,
+	requestGalleryPermission,
+	type NativeGalleryItem,
+} from '../../lib/gallery'
 import { hapticTap } from '../../lib/haptics'
 import { uploadFile } from '../../lib/storage'
 import { isUuid } from '../../lib/url'
@@ -21,6 +29,7 @@ interface AttachmentTrayProps {
 }
 
 type CropMode = 'original' | 'square'
+type NativePermState = 'checking' | 'granted' | 'denied'
 
 interface PendingImage {
 	file: File
@@ -42,23 +51,9 @@ interface PendingDoc {
 	textPreview?: string
 }
 
-interface RecordedVoice {
-	blob: Blob
-	mimeType: string
-	previewUrl: string
-	duration: number
-}
-
 const MAX_INLINE_VIDEO_BYTES = 25 * 1024 * 1024
 const MAX_INLINE_VIDEO_SECONDS = 60
-const LEVEL_BAR_COUNT = 22
-
-function formatSeconds(sec: number): string {
-	const safe = Math.max(0, Math.floor(sec))
-	const m = Math.floor(safe / 60)
-	const s = safe % 60
-	return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
+const NATIVE_PAGE_SIZE = 48
 
 function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`
@@ -126,15 +121,6 @@ function probeVideoDuration(url: string): Promise<number> {
 	})
 }
 
-function pickSupportedAudioMime(): string {
-	if (typeof MediaRecorder === 'undefined') return 'audio/webm'
-	const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg']
-	for (const mime of candidates) {
-		if (MediaRecorder.isTypeSupported(mime)) return mime
-	}
-	return 'audio/webm'
-}
-
 export function AttachmentTray({
 	spaceId,
 	galleryItems,
@@ -142,18 +128,26 @@ export function AttachmentTray({
 	onClose,
 	onSendAsset,
 }: AttachmentTrayProps) {
-	// Signal-style expandable drawer state: swipe up to expand, swipe down to collapse/close
+	// Expandable drawer state: swipe up to expand (46dvh -> 82dvh), swipe down to collapse/close
 	const [expanded, setExpanded] = useState(false)
 	const dragStartYRef = useRef<number | null>(null)
+	const bodyDragStartYRef = useRef<number | null>(null)
+	const bodyStartedAtTopRef = useRef(false)
+	const scrollBodyRef = useRef<HTMLDivElement>(null)
+
+	// Native Android gallery state
+	const isNative = hasNativeGallery()
+	const [nativePerm, setNativePerm] = useState<NativePermState>(() =>
+		isNative ? (hasGalleryPermission() ? 'granted' : 'checking') : 'denied'
+	)
+	const [nativeItems, setNativeItems] = useState<NativeGalleryItem[]>([])
+	const [loadingNative, setLoadingNative] = useState(false)
+	const [hasMoreNative, setHasMoreNative] = useState(false)
+	const [openingNativeId, setOpeningNativeId] = useState<string | null>(null)
 
 	const [pendingImage, setPendingImage] = useState<PendingImage | null>(null)
 	const [pendingVideo, setPendingVideo] = useState<PendingVideo | null>(null)
 	const [pendingDoc, setPendingDoc] = useState<PendingDoc | null>(null)
-	const [recordedVoice, setRecordedVoice] = useState<RecordedVoice | null>(null)
-	const [voiceMode, setVoiceMode] = useState(false)
-	const [isRecording, setIsRecording] = useState(false)
-	const [recordingSeconds, setRecordingSeconds] = useState(0)
-	const [levelBars, setLevelBars] = useState<number[]>(() => Array(LEVEL_BAR_COUNT).fill(18))
 
 	const [caption, setCaption] = useState('')
 	const [uploading, setUploading] = useState(false)
@@ -163,15 +157,7 @@ export function AttachmentTray({
 	const cameraInputRef = useRef<HTMLInputElement>(null)
 	const docInputRef = useRef<HTMLInputElement>(null)
 
-	const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-	const mediaStreamRef = useRef<MediaStream | null>(null)
-	const audioContextRef = useRef<AudioContext | null>(null)
-	const animFrameRef = useRef<number | null>(null)
-	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-	const recordingStartRef = useRef<number>(0)
-	const chunksRef = useRef<Blob[]>([])
 	const isMountedRef = useRef(true)
-	const isStartingRecordingRef = useRef(false)
 	const ownedPreviewUrlsRef = useRef<Set<string>>(new Set())
 
 	const trackOwnedUrl = (url: string) => {
@@ -186,52 +172,60 @@ export function AttachmentTray({
 		URL.revokeObjectURL(url)
 	}
 
-	const stopRecordingInternals = () => {
-		if (animFrameRef.current !== null) {
-			cancelAnimationFrame(animFrameRef.current)
-			animFrameRef.current = null
-		}
-		if (timerRef.current !== null) {
-			clearInterval(timerRef.current)
-			timerRef.current = null
-		}
-		if (audioContextRef.current) {
-			void audioContextRef.current.close().catch(() => {})
-			audioContextRef.current = null
-		}
-		if (mediaStreamRef.current) {
-			mediaStreamRef.current.getTracks().forEach((t) => t.stop())
-			mediaStreamRef.current = null
-		}
-	}
-
 	const clearPending = () => {
 		if (pendingImage) releaseOwnedUrl(pendingImage.previewUrl)
 		if (pendingVideo) releaseOwnedUrl(pendingVideo.previewUrl)
-		if (recordedVoice) releaseOwnedUrl(recordedVoice.previewUrl)
 		setPendingImage(null)
 		setPendingVideo(null)
 		setPendingDoc(null)
-		setRecordedVoice(null)
 		setCaption('')
 		setStatusMsg(null)
 	}
 
+	const fetchNativePage = useCallback(async (offset: number, append: boolean) => {
+		setLoadingNative(true)
+		try {
+			const page = await loadNativeGallery(NATIVE_PAGE_SIZE, offset)
+			if (!isMountedRef.current) return
+			setNativeItems((prev) => (append ? [...prev, ...page] : page))
+			setHasMoreNative(page.length >= NATIVE_PAGE_SIZE)
+		} finally {
+			if (isMountedRef.current) setLoadingNative(false)
+		}
+	}, [])
+
+	const triggerNativePermission = useCallback(async () => {
+		if (!isNative) return
+		setNativePerm('checking')
+		setStatusMsg(null)
+		const granted = await requestGalleryPermission()
+		if (!isMountedRef.current) return
+		if (granted) {
+			setNativePerm('granted')
+			await fetchNativePage(0, false)
+		} else {
+			setNativePerm('denied')
+		}
+	}, [isNative, fetchNativePage])
+
 	useEffect(() => {
 		isMountedRef.current = true
+		if (isNative) {
+			if (hasGalleryPermission()) {
+				setNativePerm('granted')
+				void fetchNativePage(0, false)
+			} else {
+				void triggerNativePermission()
+			}
+		}
 		return () => {
 			isMountedRef.current = false
-			if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-				mediaRecorderRef.current.onstop = null
-				mediaRecorderRef.current.stop()
-			}
-			stopRecordingInternals()
 			for (const url of ownedPreviewUrlsRef.current) {
 				URL.revokeObjectURL(url)
 			}
 			ownedPreviewUrlsRef.current.clear()
 		}
-	}, [])
+	}, [isNative, fetchNativePage, triggerNativePermission])
 
 	const uploadAssetOrFallback = async (
 		file: File,
@@ -256,7 +250,9 @@ export function AttachmentTray({
 			}
 		} catch (err) {
 			if (isLiveSignedIn) {
-				releaseOwnedUrl(fallbackUrl)
+				if (fallbackUrl !== pendingImage?.previewUrl && fallbackUrl !== pendingVideo?.previewUrl) {
+					releaseOwnedUrl(fallbackUrl)
+				}
 				throw err instanceof Error ? err : new Error('Upload to Concord R2 failed')
 			}
 			ownedPreviewUrlsRef.current.delete(fallbackUrl)
@@ -276,7 +272,6 @@ export function AttachmentTray({
 
 	const openGalleryFileInEditor = async (item: DeviceGalleryItem) => {
 		clearPending()
-		setVoiceMode(false)
 		hapticTap()
 
 		if (item.kind === 'video') {
@@ -303,6 +298,30 @@ export function AttachmentTray({
 		setPendingImage({ file: item.file, previewUrl: item.previewUrl, rotation: 0, cropMode: 'original' })
 	}
 
+	const handleSelectNativeItem = async (item: NativeGalleryItem) => {
+		if (openingNativeId) return
+		setOpeningNativeId(item.id)
+		setStatusMsg(null)
+		hapticTap()
+		try {
+			const file = await readNativeMediaAsFile(item)
+			if (!isMountedRef.current) return
+			const previewUrl = trackOwnedUrl(URL.createObjectURL(file))
+			await openGalleryFileInEditor({
+				id: item.id,
+				file,
+				previewUrl,
+				kind: item.kind,
+			})
+		} catch (err) {
+			if (isMountedRef.current) {
+				setStatusMsg(err instanceof Error ? err.message : 'Failed to open media')
+			}
+		} finally {
+			if (isMountedRef.current) setOpeningNativeId(null)
+		}
+	}
+
 	const handlePickDeviceMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files || [])
 		e.target.value = ''
@@ -317,7 +336,6 @@ export function AttachmentTray({
 
 		onAddGalleryItems(newItems)
 
-		// If user picked a single item, jump straight into preview; if multiple, show them in the scrollable drawer
 		if (newItems.length === 1) {
 			await openGalleryFileInEditor(newItems[0])
 		} else {
@@ -330,7 +348,6 @@ export function AttachmentTray({
 		e.target.value = ''
 		if (!file) return
 		clearPending()
-		setVoiceMode(false)
 
 		const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
 		let textPreview: string | undefined
@@ -376,110 +393,7 @@ export function AttachmentTray({
 		}
 	}
 
-	const startVoiceRecording = async () => {
-		if (isRecording || isStartingRecordingRef.current) return
-		if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-			setStatusMsg('Voice recording is not supported in this browser.')
-			return
-		}
-		if (recordedVoice) {
-			releaseOwnedUrl(recordedVoice.previewUrl)
-			setRecordedVoice(null)
-		}
-		setStatusMsg(null)
-		isStartingRecordingRef.current = true
-		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-			if (!isMountedRef.current) {
-				stream.getTracks().forEach((t) => t.stop())
-				return
-			}
-			mediaStreamRef.current = stream
-			chunksRef.current = []
-			const mimeType = pickSupportedAudioMime()
-			const recorder = new MediaRecorder(stream, { mimeType })
-			mediaRecorderRef.current = recorder
-
-			recorder.ondataavailable = (ev) => {
-				if (ev.data.size > 0) chunksRef.current.push(ev.data)
-			}
-			recorder.onstop = () => {
-				const elapsed = Math.max(1, (Date.now() - recordingStartRef.current) / 1000)
-				const finalMime = recorder.mimeType || mimeType
-				const blob = new Blob(chunksRef.current, { type: finalMime })
-				const previewUrl = trackOwnedUrl(URL.createObjectURL(blob))
-				setRecordedVoice({ blob, mimeType: finalMime, previewUrl, duration: Math.round(elapsed) })
-				setIsRecording(false)
-				stopRecordingInternals()
-			}
-
-			try {
-				const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-				const audioCtx = new AudioCtx()
-				audioContextRef.current = audioCtx
-				const source = audioCtx.createMediaStreamSource(stream)
-				const analyser = audioCtx.createAnalyser()
-				analyser.fftSize = 64
-				source.connect(analyser)
-				const freqData = new Uint8Array(analyser.frequencyBinCount)
-				const tick = () => {
-					analyser.getByteFrequencyData(freqData)
-					const bars: number[] = []
-					const step = Math.max(1, Math.floor(freqData.length / LEVEL_BAR_COUNT))
-					for (let i = 0; i < LEVEL_BAR_COUNT; i++) {
-						const val = freqData[i * step] ?? 0
-						bars.push(Math.max(16, Math.min(100, Math.round((val / 255) * 100))))
-					}
-					setLevelBars(bars)
-					animFrameRef.current = requestAnimationFrame(tick)
-				}
-				animFrameRef.current = requestAnimationFrame(tick)
-			} catch {
-				// fallback quiet bars
-			}
-
-			recordingStartRef.current = Date.now()
-			setRecordingSeconds(0)
-			setIsRecording(true)
-			recorder.start(200)
-			timerRef.current = setInterval(() => {
-				setRecordingSeconds(Math.floor((Date.now() - recordingStartRef.current) / 1000))
-			}, 250)
-		} catch (err) {
-			stopRecordingInternals()
-			setIsRecording(false)
-			setStatusMsg(err instanceof Error ? err.message : 'Microphone access denied')
-		} finally {
-			isStartingRecordingRef.current = false
-		}
-	}
-
-	const stopVoiceRecording = () => {
-		if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-			mediaRecorderRef.current.stop()
-		}
-	}
-
-	const handleSendVoice = async () => {
-		if (!recordedVoice) return
-		setUploading(true)
-		setStatusMsg(null)
-		try {
-			const ext = recordedVoice.mimeType.includes('ogg') ? 'ogg' : 'webm'
-			const audioFile = new File([recordedVoice.blob], `voice-${Date.now()}.${ext}`, {
-				type: recordedVoice.mimeType.split(';')[0] || `audio/${ext}`,
-			})
-			const asset = await uploadAssetOrFallback(audioFile, 'audio', recordedVoice.previewUrl)
-			onSendAsset(asset, caption.trim() || undefined)
-			onClose()
-		} catch (err) {
-			setStatusMsg(err instanceof Error ? err.message : 'Voice upload failed')
-		} finally {
-			setUploading(false)
-		}
-	}
-
-	// Swipe up/down on drawer handle to expand, collapse, or dismiss
+	// Swipe up/down on drawer header/handle to expand, collapse, or dismiss
 	const onHandleTouchStart = (e: React.TouchEvent) => {
 		dragStartYRef.current = e.touches[0].clientY
 	}
@@ -488,10 +402,33 @@ export function AttachmentTray({
 		if (dragStartYRef.current === null) return
 		const dy = e.changedTouches[0].clientY - dragStartYRef.current
 		dragStartYRef.current = null
-		if (dy < -36) {
+		if (dy < -30) {
 			hapticTap()
 			setExpanded(true)
-		} else if (dy > 40) {
+		} else if (dy > 36) {
+			hapticTap()
+			if (expanded) setExpanded(false)
+			else onClose()
+		}
+	}
+
+	// Swipe up/down on scrollable gallery body when at top (scrollTop === 0)
+	const onBodyTouchStart = (e: React.TouchEvent) => {
+		bodyDragStartYRef.current = e.touches[0].clientY
+		bodyStartedAtTopRef.current = (scrollBodyRef.current?.scrollTop ?? 0) <= 2
+	}
+
+	const onBodyTouchEnd = (e: React.TouchEvent) => {
+		if (bodyDragStartYRef.current === null) return
+		const dy = e.changedTouches[0].clientY - bodyDragStartYRef.current
+		const startedAtTop = bodyStartedAtTopRef.current
+		bodyDragStartYRef.current = null
+		bodyStartedAtTopRef.current = false
+
+		if (!expanded && dy < -36) {
+			hapticTap()
+			setExpanded(true)
+		} else if (startedAtTop && dy > 44) {
 			hapticTap()
 			if (expanded) setExpanded(false)
 			else onClose()
@@ -502,7 +439,7 @@ export function AttachmentTray({
 		<div
 			data-no-pane-swipe="true"
 			className={`bg-[#221d19] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
-				expanded ? 'h-[76dvh]' : 'h-[44dvh] min-h-[300px]'
+				expanded ? 'h-[82dvh]' : 'h-[46dvh] min-h-[300px]'
 			}`}
 		>
 			{/* Hidden OS Pickers */}
@@ -530,7 +467,7 @@ export function AttachmentTray({
 				className="hidden"
 			/>
 
-			{/* Swipeable Drawer Handle */}
+			{/* Swipeable Drawer Header & Handle */}
 			<div
 				onTouchStart={onHandleTouchStart}
 				onTouchEnd={onHandleTouchEnd}
@@ -538,21 +475,26 @@ export function AttachmentTray({
 					hapticTap()
 					setExpanded((v) => !v)
 				}}
-				className="pt-2.5 pb-2 flex flex-col items-center cursor-pointer shrink-0"
+				className="pt-2.5 pb-2.5 px-4 flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
 				title={expanded ? 'Collapse drawer' : 'Expand drawer'}
 			>
-				<span className="w-11 h-1.5 rounded-full bg-white/20" />
+				<span className="w-11 h-1.5 rounded-full bg-[#e5ebcd]/20" />
 			</div>
 
 			{/* Scrollable Drawer Body */}
-			<div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3.5 pb-2">
+			<div
+				ref={scrollBodyRef}
+				onTouchStart={onBodyTouchStart}
+				onTouchEnd={onBodyTouchEnd}
+				className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3.5 pb-2"
+			>
 				{pendingImage || pendingVideo || pendingDoc ? (
 					<div className="space-y-3 pb-2">
 						<div className="flex items-center justify-between">
 							<button
 								type="button"
 								onClick={clearPending}
-								className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
+								className="text-[14px] font-semibold text-[#b8afa3] hover:text-[#e5ebcd] cursor-pointer"
 							>
 								Back
 							</button>
@@ -564,7 +506,7 @@ export function AttachmentTray({
 											onClick={() =>
 												setPendingImage((p) => (p ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
 											}
-											className="px-3 py-1.5 rounded-full bg-[#1a1a23] text-[13px] font-semibold text-zinc-200 cursor-pointer"
+											className="px-3 py-1.5 rounded-xl bg-[#2a241f] hover:bg-[#352e27] text-[13px] font-semibold text-[#e5ebcd] cursor-pointer transition"
 										>
 											Rotate
 										</button>
@@ -575,10 +517,10 @@ export function AttachmentTray({
 													p ? { ...p, cropMode: p.cropMode === 'square' ? 'original' : 'square' } : p
 												)
 											}
-											className={`px-3 py-1.5 rounded-full text-[13px] font-semibold cursor-pointer ${
+											className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold cursor-pointer transition ${
 												pendingImage.cropMode === 'square'
-													? 'bg-[#8b5cf6] text-white'
-													: 'bg-[#1a1a23] text-zinc-200'
+													? 'bg-[#cedb9c] text-[#1b1714]'
+													: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 											}`}
 										>
 											1:1
@@ -589,7 +531,7 @@ export function AttachmentTray({
 						</div>
 
 						{pendingImage && (
-							<div className="rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-56">
+							<div className="rounded-2xl overflow-hidden bg-[#1b1714] flex items-center justify-center max-h-56">
 								<img
 									src={pendingImage.previewUrl}
 									alt="Preview"
@@ -602,7 +544,7 @@ export function AttachmentTray({
 						)}
 
 						{pendingVideo && (
-							<div className="rounded-2xl overflow-hidden bg-black">
+							<div className="rounded-2xl overflow-hidden bg-[#1b1714]">
 								<video
 									src={pendingVideo.previewUrl}
 									controls
@@ -614,12 +556,12 @@ export function AttachmentTray({
 						)}
 
 						{pendingDoc && (
-							<div className="rounded-2xl bg-[#181820] p-4 flex items-center justify-between gap-3">
+							<div className="rounded-2xl bg-[#1b1714] p-4 flex items-center justify-between gap-3">
 								<div className="min-w-0">
-									<div className="text-[15px] font-semibold text-white truncate">{pendingDoc.file.name}</div>
-									<div className="text-[13px] text-zinc-400">{formatBytes(pendingDoc.file.size)}</div>
+									<div className="text-[15px] font-semibold text-[#e5ebcd] truncate">{pendingDoc.file.name}</div>
+									<div className="text-[13px] text-[#9a8f82]">{formatBytes(pendingDoc.file.size)}</div>
 								</div>
-								<span className="px-3 py-1 rounded-full bg-[#8b5cf6]/20 text-[#c4b5fd] text-[12px] font-semibold">
+								<span className="px-2.5 py-1 rounded-lg bg-[#2a241f] text-[#cedb9c] text-[12px] font-semibold shrink-0">
 									{pendingDoc.isPdf ? 'PDF' : 'File'}
 								</span>
 							</div>
@@ -631,104 +573,146 @@ export function AttachmentTray({
 								value={caption}
 								onChange={(e) => setCaption(e.target.value)}
 								placeholder="Add a caption…"
-								className="flex-1 min-w-0 rounded-2xl bg-[#181820] px-4 py-3 text-[15px] text-white placeholder:text-zinc-500 focus:outline-none"
+								className="flex-1 min-w-0 rounded-2xl bg-[#1b1714] px-4 py-3 text-[15px] text-[#e5ebcd] placeholder:text-[#8c8276] focus:outline-none"
 							/>
 							<button
 								type="button"
 								disabled={uploading}
 								onClick={handleSendPending}
-								className="px-5 py-3 rounded-2xl bg-white text-black hover:bg-zinc-200 disabled:opacity-40 text-[14px] font-bold cursor-pointer shrink-0"
+								className="px-5 py-3 rounded-2xl bg-[#cedb9c] text-[#1b1714] hover:bg-[#dce6b5] disabled:opacity-40 text-[14px] font-bold cursor-pointer shrink-0 transition"
 							>
 								{uploading ? 'Sending…' : 'Send'}
 							</button>
 						</div>
 					</div>
-				) : voiceMode ? (
-					<div className="space-y-4 py-1">
-						<div className="flex items-center justify-between">
-							<button
-								type="button"
-								onClick={() => {
-									if (isRecording) stopVoiceRecording()
-									clearPending()
-									setVoiceMode(false)
-								}}
-								className="text-[14px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-							>
-								Back
-							</button>
-							<span className="text-[15px] font-semibold text-white">Voice Note</span>
-							<span className="text-[13px] font-mono text-zinc-400">{formatSeconds(recordingSeconds)}</span>
-						</div>
-
-						{recordedVoice ? (
-							<div className="space-y-3">
-								<audio src={recordedVoice.previewUrl} controls className="w-full h-10" />
-								<div className="flex items-center justify-end gap-2">
-									<button
-										type="button"
-										onClick={() => {
-											releaseOwnedUrl(recordedVoice.previewUrl)
-											setRecordedVoice(null)
-										}}
-										className="px-4 py-2.5 rounded-2xl bg-[#1a1a23] text-[14px] font-semibold text-zinc-300 cursor-pointer"
-									>
-										Retake
-									</button>
-									<button
-										type="button"
-										disabled={uploading}
-										onClick={handleSendVoice}
-										className="px-5 py-2.5 rounded-2xl bg-white text-black text-[14px] font-bold cursor-pointer"
-									>
-										{uploading ? 'Sending…' : 'Send Voice'}
-									</button>
-								</div>
-							</div>
-						) : (
-							<div className="flex flex-col items-center gap-4 py-4">
-								<div className="flex items-end justify-center gap-1 h-12 w-full max-w-xs">
-									{levelBars.map((h, i) => (
-										<span
-											key={i}
-											style={{ height: `${isRecording ? h : 20}%` }}
-											className={`w-1.5 rounded-full transition-all duration-75 ${
-												isRecording ? 'bg-[#a78bfa]' : 'bg-zinc-700'
-											}`}
-										/>
-									))}
+				) : isNative ? (
+					/* Native Android MediaStore Gallery */
+					<div className="h-full flex flex-col">
+						{nativePerm === 'denied' ? (
+							<div className="flex-1 min-h-[160px] w-full rounded-2xl bg-[#1b1714] flex flex-col items-center justify-center gap-3 p-6 text-center">
+								<span className="w-12 h-12 rounded-2xl bg-[#2a241f] text-[#cedb9c] flex items-center justify-center">
+									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+										<rect x="3" y="3" width="18" height="18" rx="3" />
+										<circle cx="8.5" cy="8.5" r="1.5" />
+										<path d="M21 15l-5-5L5 21" />
+									</svg>
+								</span>
+								<div className="space-y-1 max-w-xs">
+									<div className="text-[15px] font-semibold text-[#e5ebcd]">Photo & Video Access</div>
+									<div className="text-[13px] text-[#9a8f82]">
+										Allow Concord to show your recent photos and videos right here.
+									</div>
 								</div>
 								<button
 									type="button"
-									onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-									className={`px-6 py-3 rounded-full text-[15px] font-bold transition cursor-pointer ${
-										isRecording
-											? 'bg-red-500 text-white hover:bg-red-600'
-											: 'bg-[#8b5cf6] text-white hover:bg-[#7c3aed]'
-									}`}
+									onClick={() => void triggerNativePermission()}
+									className="mt-1 px-4 py-2.5 rounded-xl bg-[#cedb9c] text-[#1b1714] hover:bg-[#dce6b5] text-[14px] font-semibold cursor-pointer transition"
 								>
-									{isRecording ? 'Stop Recording' : 'Tap to Record'}
+									Allow Photo & Video Access
 								</button>
 							</div>
+						) : nativePerm === 'checking' || (loadingNative && nativeItems.length === 0) ? (
+							<div className="grid grid-cols-3 gap-1.5 pb-2">
+								{Array.from({ length: 9 }).map((_, idx) => (
+									<div
+										key={idx}
+										className="aspect-square rounded-xl bg-[#2a241f] animate-pulse"
+									/>
+								))}
+							</div>
+						) : nativeItems.length > 0 ? (
+							<div className="space-y-2 pb-2">
+								<div className="grid grid-cols-3 gap-1.5">
+									{nativeItems.map((item) => {
+										const isOpening = openingNativeId === item.id
+										return (
+											<button
+												key={item.id}
+												type="button"
+												disabled={Boolean(openingNativeId)}
+												onClick={() => void handleSelectNativeItem(item)}
+												className="aspect-square rounded-xl overflow-hidden bg-[#1b1714] relative group cursor-pointer disabled:opacity-60"
+											>
+												{item.thumbnailDataUrl ? (
+													<img
+														src={item.thumbnailDataUrl}
+														alt={item.filename}
+														loading="lazy"
+														className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+													/>
+												) : (
+													<div className="w-full h-full flex items-center justify-center text-[#9a8f82]">
+														<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+															<rect x="3" y="3" width="18" height="18" rx="3" />
+															<circle cx="8.5" cy="8.5" r="1.5" />
+															<path d="M21 15l-5-5L5 21" />
+														</svg>
+													</div>
+												)}
+												{item.kind === 'video' && (
+													<span className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-lg bg-[#1b1714]/80 text-[#e5ebcd] flex items-center justify-center">
+														<svg className="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+															<path d="M6 4l15 8-15 8V4z" />
+														</svg>
+													</span>
+												)}
+												{isOpening && (
+													<div className="absolute inset-0 bg-[#1b1714]/70 flex items-center justify-center">
+														<span className="w-5 h-5 border-2 border-[#cedb9c] border-t-transparent rounded-full animate-spin" />
+													</div>
+												)}
+											</button>
+										)
+									})}
+								</div>
+								{hasMoreNative && (
+									<button
+										type="button"
+										disabled={loadingNative}
+										onClick={() => void fetchNativePage(nativeItems.length, true)}
+										className="w-full py-2.5 rounded-xl bg-[#2a241f] hover:bg-[#352e27] text-[13px] font-semibold text-[#e5ebcd] disabled:opacity-50 cursor-pointer transition"
+									>
+										{loadingNative ? 'Loading…' : 'Load more'}
+									</button>
+								)}
+							</div>
+						) : (
+							<button
+								type="button"
+								onClick={() => galleryInputRef.current?.click()}
+								className="flex-1 min-h-[150px] w-full rounded-2xl bg-[#1b1714] hover:bg-[#2a241f] flex flex-col items-center justify-center gap-2.5 p-6 text-center transition cursor-pointer"
+							>
+								<span className="w-12 h-12 rounded-2xl bg-[#2a241f] text-[#cedb9c] flex items-center justify-center">
+									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+										<rect x="3" y="3" width="18" height="18" rx="3" />
+										<circle cx="8.5" cy="8.5" r="1.5" />
+										<path d="M21 15l-5-5L5 21" />
+									</svg>
+								</span>
+								<div className="space-y-0.5">
+									<div className="text-[15px] font-semibold text-[#e5ebcd]">No recent media found</div>
+									<div className="text-[13px] text-[#9a8f82]">Tap to browse device files</div>
+								</div>
+							</button>
 						)}
 					</div>
 				) : (
-					/* Signal-Style Device Gallery Area (Scrollable Device Photos/Videos) */
+					/* Web Multi-Select Gallery Fallback */
 					<div className="h-full flex flex-col">
 						{galleryItems.length > 0 ? (
-							<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2">
+							<div className="grid grid-cols-3 gap-1.5 pb-2">
 								{galleryItems.map((item) => (
 									<button
 										key={item.id}
 										type="button"
 										onClick={() => void openGalleryFileInEditor(item)}
-										className="aspect-square rounded-2xl overflow-hidden bg-black relative group cursor-pointer"
+										className="aspect-square rounded-xl overflow-hidden bg-[#1b1714] relative group cursor-pointer"
 									>
 										{item.kind === 'video' ? (
 											<>
 												<video src={item.previewUrl} muted playsInline className="w-full h-full object-cover" />
-												<span className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center">
-													<svg className="w-3.5 h-3.5 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+												<span className="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-lg bg-[#1b1714]/80 text-[#e5ebcd] flex items-center justify-center">
+													<svg className="w-3 h-3 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
 														<path d="M6 4l15 8-15 8V4z" />
 													</svg>
 												</span>
@@ -745,9 +729,9 @@ export function AttachmentTray({
 								<button
 									type="button"
 									onClick={() => galleryInputRef.current?.click()}
-									className="aspect-square rounded-2xl bg-[#181822] hover:bg-[#222230] flex flex-col items-center justify-center gap-1.5 text-zinc-300 cursor-pointer"
+									className="aspect-square rounded-xl bg-[#2a241f] hover:bg-[#352e27] flex flex-col items-center justify-center gap-1.5 text-[#e5ebcd] cursor-pointer transition"
 								>
-									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+									<svg className="w-6 h-6 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
 										<line x1="12" y1="5" x2="12" y2="19" />
 										<line x1="5" y1="12" x2="19" y2="12" />
 									</svg>
@@ -758,9 +742,9 @@ export function AttachmentTray({
 							<button
 								type="button"
 								onClick={() => galleryInputRef.current?.click()}
-								className="flex-1 min-h-[150px] w-full rounded-2xl bg-[#171720] hover:bg-[#1e1e2a] flex flex-col items-center justify-center gap-2.5 p-6 text-center transition cursor-pointer"
+								className="flex-1 min-h-[150px] w-full rounded-2xl bg-[#1b1714] hover:bg-[#2a241f] flex flex-col items-center justify-center gap-2.5 p-6 text-center transition cursor-pointer"
 							>
-								<span className="w-12 h-12 rounded-2xl bg-[#8b5cf6]/20 text-[#c4b5fd] flex items-center justify-center">
+								<span className="w-12 h-12 rounded-2xl bg-[#2a241f] text-[#cedb9c] flex items-center justify-center">
 									<svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 										<rect x="3" y="3" width="18" height="18" rx="3" />
 										<circle cx="8.5" cy="8.5" r="1.5" />
@@ -768,9 +752,9 @@ export function AttachmentTray({
 									</svg>
 								</span>
 								<div className="space-y-0.5">
-									<div className="text-[15px] font-semibold text-white">Open Device Gallery</div>
-									<div className="text-[13px] text-zinc-400">
-										Pick photos or videos from your phone — swipe up to expand
+									<div className="text-[15px] font-semibold text-[#e5ebcd]">Open Device Gallery</div>
+									<div className="text-[13px] text-[#9a8f82]">
+										Pick photos or videos — swipe up to expand
 									</div>
 								</div>
 							</button>
@@ -785,22 +769,22 @@ export function AttachmentTray({
 				)}
 			</div>
 
-			{/* Signal-Style Bottom Action Row (Gallery | File | Camera | Voice) */}
-			{!pendingImage && !pendingVideo && !pendingDoc && !voiceMode && (
-				<div className="px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-[#1b1714] grid grid-cols-4 gap-3 shrink-0">
+			{/* Bottom Action Row (Gallery | File | Camera) */}
+			{!pendingImage && !pendingVideo && !pendingDoc && (
+				<div className="px-4 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] bg-[#1b1714] grid grid-cols-3 gap-3 shrink-0">
 					<button
 						type="button"
 						onClick={() => galleryInputRef.current?.click()}
 						className="flex flex-col items-center gap-1.5 cursor-pointer group"
 					>
-						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<span className="w-12 h-12 rounded-2xl bg-[#2a241f] group-hover:bg-[#352e27] text-[#e5ebcd] flex items-center justify-center transition">
+							<svg className="w-5 h-5 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 								<rect x="3" y="3" width="18" height="18" rx="3" />
 								<circle cx="8.5" cy="8.5" r="1.5" />
 								<path d="M21 15l-5-5L5 21" />
 							</svg>
 						</span>
-						<span className="text-[12px] font-medium text-zinc-300">Gallery</span>
+						<span className="text-[12px] font-medium text-[#b8afa3]">Gallery</span>
 					</button>
 
 					<button
@@ -808,13 +792,13 @@ export function AttachmentTray({
 						onClick={() => docInputRef.current?.click()}
 						className="flex flex-col items-center gap-1.5 cursor-pointer group"
 					>
-						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<span className="w-12 h-12 rounded-2xl bg-[#2a241f] group-hover:bg-[#352e27] text-[#e5ebcd] flex items-center justify-center transition">
+							<svg className="w-5 h-5 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
 								<polyline points="14 2 14 8 20 8" />
 							</svg>
 						</span>
-						<span className="text-[12px] font-medium text-zinc-300">File</span>
+						<span className="text-[12px] font-medium text-[#b8afa3]">File</span>
 					</button>
 
 					<button
@@ -822,28 +806,13 @@ export function AttachmentTray({
 						onClick={() => cameraInputRef.current?.click()}
 						className="flex flex-col items-center gap-1.5 cursor-pointer group"
 					>
-						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<span className="w-12 h-12 rounded-2xl bg-[#2a241f] group-hover:bg-[#352e27] text-[#e5ebcd] flex items-center justify-center transition">
+							<svg className="w-5 h-5 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 								<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
 								<circle cx="12" cy="13" r="4" />
 							</svg>
 						</span>
-						<span className="text-[12px] font-medium text-zinc-300">Camera</span>
-					</button>
-
-					<button
-						type="button"
-						onClick={() => setVoiceMode(true)}
-						className="flex flex-col items-center gap-1.5 cursor-pointer group"
-					>
-						<span className="w-12 h-12 rounded-2xl bg-[#1c1c28] group-hover:bg-[#262636] text-zinc-100 flex items-center justify-center transition">
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-								<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-								<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-								<line x1="12" y1="19" x2="12" y2="23" />
-							</svg>
-						</span>
-						<span className="text-[12px] font-medium text-zinc-300">Voice</span>
+						<span className="text-[12px] font-medium text-[#b8afa3]">Camera</span>
 					</button>
 				</div>
 			)}

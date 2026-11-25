@@ -138,7 +138,7 @@ export function SpaceDetailsDrawer({
 									</svg>
 								</button>
 
-								<span className="absolute top-3.5 left-4 px-3 py-1 rounded-full bg-black/55 text-[12px] font-semibold text-zinc-200">
+								<span className="absolute top-4 left-4 text-[12px] text-[#9e998c]">
 									{role === 'curator' ? 'Curator' : 'Member'}
 								</span>
 

@@ -529,7 +529,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 												>
 													<div className="flex items-center justify-between gap-2 text-[13px]">
 														<span className="font-semibold text-[#edf3d2] truncate">{item.filename}</span>
-														<span className="text-[12px] text-[#cedb9c] shrink-0">Audio</span>
+														<span className="text-[12px] text-[#9e998c] shrink-0">Audio</span>
 													</div>
 													<audio src={safeUrl} controls preload="metadata" className="w-full h-9" />
 												</div>
@@ -592,7 +592,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 													{friendlyFormatLabel(doc)} &bull; {formatFileSize(doc.sizeBytes)}
 												</div>
 											</div>
-											<span className="text-[12px] font-semibold px-2.5 py-1 rounded-lg bg-[#243e34] text-[#cedb9c] shrink-0">
+											<span className="text-[12px] text-[#9e998c] shrink-0">
 												{shortFormatBadge(doc)}
 											</span>
 										</button>

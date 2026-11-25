@@ -39,7 +39,7 @@ jobs:
             SDK_MANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)
           fi
           yes | "$SDK_MANAGER" --licenses > /dev/null || true
-          "$SDK_MANAGER" "ndk;26.1.10909125" "platforms;android-34" "build-tools;34.0.0"
+          "$SDK_MANAGER" "ndk;26.1.10909125" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0" "build-tools;36.0.0"
           echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
       - name: Setup Rust (Android aarch64)
@@ -61,6 +61,7 @@ jobs:
       - name: Initialize Tauri Android & apply Concord icons
         run: |
           bunx tauri android init --ci
+          bun scripts/patch-android-gallery.mjs
           bunx tauri icon src-tauri/icons/concord-icon-1024.png
 
       - name: Build optimized Release Android APK (aarch64)

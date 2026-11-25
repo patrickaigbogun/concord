@@ -28,13 +28,12 @@ import {
 import { INITIAL_FILES, INITIAL_MESSAGES, INITIAL_REALMS } from '../../lib/demo'
 import { hapticMenu, hapticReply, hapticTap } from '../../lib/haptics'
 import { ConcordSocket, type SocketConnectionState } from '../../lib/socket'
+import { uploadFile } from '../../lib/storage'
 import { isUuid, safeMediaUrl } from '../../lib/url'
-import type { ChatMessage, FileAsset, Realm, RealmNote, RoomViewMode, Space } from '../../lib/types'
+import type { ChatMessage, FileAsset, Realm, RoomViewMode, Space } from '../../lib/types'
 import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
 import { CreateRealmModal, CreateSpaceModal } from '../components/CreateModals'
 import { LeftRealmsPanel } from '../components/LeftRealmsPanel'
-import { RealmNoteBar } from '../components/RealmNoteBar'
-import { RealmNoteModal } from '../components/RealmNoteModal'
 import { RightSpacePanel } from '../components/RightSpacePanel'
 import { SpaceDetailsDrawer, type SpacePersonaState } from '../components/SpaceDetailsDrawer'
 import { SpaceOrbBar } from '../components/SpaceOrbBar'
@@ -44,6 +43,7 @@ export const metadata = { title: 'Concord' }
 
 const VIEW_MODE_KEY = 'concord_realms_view_mode_v2'
 const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏', '😂']
+const VOICE_LEVEL_BAR_COUNT = 18
 
 const ORB_GRADIENTS = [
 	'from-[#244438] to-[#172c24]',
@@ -63,6 +63,28 @@ function formatTime(iso?: string): string {
 	const date = new Date(iso)
 	if (Number.isNaN(date.getTime())) return iso
 	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatVoiceSeconds(sec: number): string {
+	const safe = Math.max(0, Math.floor(sec))
+	const m = Math.floor(safe / 60)
+	const s = safe % 60
+	return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function pickSupportedAudioMime(): string | undefined {
+	if (typeof MediaRecorder === 'undefined') return undefined
+	const candidates = [
+		'audio/webm;codecs=opus',
+		'audio/webm',
+		'audio/mp4',
+		'audio/ogg;codecs=opus',
+		'audio/ogg',
+	]
+	for (const mime of candidates) {
+		if (MediaRecorder.isTypeSupported(mime)) return mime
+	}
+	return undefined
 }
 
 function classifyAssetKind(contentType: string, filename: string): FileAsset['kind'] {
@@ -235,7 +257,12 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 
 export default function ConcordAppPage() {
 	const [session, setSession] = useState<ConcordSession | null>(null)
-	const [viewMode, setViewMode] = useState<RoomViewMode>('grid-visual')
+	const [viewMode, setViewMode] = useState<RoomViewMode>(() => {
+		if (typeof window === 'undefined') return 'grid-visual'
+		const saved = localStorage.getItem(VIEW_MODE_KEY)
+		if (saved === 'grid-titled' || saved === 'grid-visual' || saved === 'list') return saved
+		return 'grid-visual'
+	})
 	const [settingsOpen, setSettingsOpen] = useState(false)
 	const [realms, setRealms] = useState<Realm[]>(INITIAL_REALMS)
 	const [activeRealmId, setActiveRealmId] = useState(INITIAL_REALMS[0].id)
@@ -258,7 +285,26 @@ export default function ConcordAppPage() {
 	// Action modals
 	const [createRealmOpen, setCreateRealmOpen] = useState(false)
 	const [createSpaceOpen, setCreateSpaceOpen] = useState(false)
-	const [noteModalOpen, setNoteModalOpen] = useState(false)
+
+	// Inline Voice Note Recorder state
+	const [voiceRecorderOpen, setVoiceRecorderOpen] = useState(false)
+	const [isRecordingVoice, setIsRecordingVoice] = useState(false)
+	const [isUploadingVoice, setIsUploadingVoice] = useState(false)
+	const [voiceSeconds, setVoiceSeconds] = useState(0)
+	const [voiceLevelBars, setVoiceLevelBars] = useState<number[]>(() =>
+		Array(VOICE_LEVEL_BAR_COUNT).fill(18)
+	)
+	const voiceRecorderRef = useRef<MediaRecorder | null>(null)
+	const voiceStreamRef = useRef<MediaStream | null>(null)
+	const voiceAudioCtxRef = useRef<AudioContext | null>(null)
+	const voiceAnimFrameRef = useRef<number | null>(null)
+	const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+	const voiceStartRef = useRef<number>(0)
+	const voiceChunksRef = useRef<Blob[]>([])
+	const voiceActionRef = useRef<'send' | 'cancel'>('cancel')
+	const voiceStartingRef = useRef(false)
+	const isMountedRef = useRef(true)
+	const voiceObjectUrlsRef = useRef<Set<string>>(new Set())
 
 	// Long-press context menu, selection mode, kept/checked/forward states
 	const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null)
@@ -305,10 +351,6 @@ export default function ConcordAppPage() {
 
 	useEffect(() => {
 		setSession(getSession())
-		const savedMode = localStorage.getItem(VIEW_MODE_KEY) as RoomViewMode | null
-		if (savedMode === 'grid-titled' || savedMode === 'grid-visual' || savedMode === 'list') {
-			setViewMode(savedMode)
-		}
 
 		let cancelled = false
 		let unlisten: (() => void) | undefined
@@ -465,19 +507,66 @@ export default function ConcordAppPage() {
 		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
 	}, [messages.length, activeSpace.id])
 
+	const cleanupVoiceInternals = () => {
+		if (voiceAnimFrameRef.current !== null) {
+			cancelAnimationFrame(voiceAnimFrameRef.current)
+			voiceAnimFrameRef.current = null
+		}
+		if (voiceTimerRef.current !== null) {
+			clearInterval(voiceTimerRef.current)
+			voiceTimerRef.current = null
+		}
+		if (voiceAudioCtxRef.current) {
+			void voiceAudioCtxRef.current.close().catch(() => {})
+			voiceAudioCtxRef.current = null
+		}
+		if (voiceStreamRef.current) {
+			voiceStreamRef.current.getTracks().forEach((t) => t.stop())
+			voiceStreamRef.current = null
+		}
+	}
+
+	const cancelVoiceRecording = () => {
+		voiceActionRef.current = 'cancel'
+		const recorder = voiceRecorderRef.current
+		if (recorder && recorder.state !== 'inactive') {
+			recorder.onstop = null
+			recorder.stop()
+		}
+		voiceRecorderRef.current = null
+		voiceChunksRef.current = []
+		cleanupVoiceInternals()
+		setIsRecordingVoice(false)
+		setVoiceRecorderOpen(false)
+		setVoiceSeconds(0)
+		setVoiceLevelBars(Array(VOICE_LEVEL_BAR_COUNT).fill(18))
+	}
+
 	useEffect(() => {
 		setContextMsg(null)
 		setSelectionMode(false)
 		setSelectedMsgIds(new Set())
 		setReplyTo(null)
 		setOpenTray('none')
+		cancelVoiceRecording()
 	}, [activeSpace.id])
 
 	useEffect(() => {
+		isMountedRef.current = true
 		return () => {
+			isMountedRef.current = false
 			if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
 			if (replyPulseTimerRef.current) clearTimeout(replyPulseTimerRef.current)
 			if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+			if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
+				voiceRecorderRef.current.onstop = null
+				voiceRecorderRef.current.stop()
+			}
+			cleanupVoiceInternals()
+			for (const url of voiceObjectUrlsRef.current) {
+				URL.revokeObjectURL(url)
+			}
+			voiceObjectUrlsRef.current.clear()
 		}
 	}, [])
 
@@ -725,9 +814,183 @@ export default function ConcordAppPage() {
 		setContextMsg(null)
 	}
 
-	const handleSaveRealmNote = (note: RealmNote) => {
-		setRealms((prev) => prev.map((r) => (r.id === activeRealm.id ? { ...r, note } : r)))
-		setNoteModalOpen(false)
+	const startInlineVoiceRecording = async () => {
+		if (isRecordingVoice || voiceStartingRef.current || isUploadingVoice) return
+		if (
+			typeof navigator === 'undefined' ||
+			!navigator.mediaDevices?.getUserMedia ||
+			typeof MediaRecorder === 'undefined'
+		) {
+			showToast('Voice recording is not supported here')
+			return
+		}
+		hapticTap()
+		setOpenTray('none')
+		setOrbBarExpanded(false)
+		voiceStartingRef.current = true
+		voiceActionRef.current = 'cancel'
+		const recordingSpaceId = activeSpace.id
+
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+			if (!isMountedRef.current) {
+				stream.getTracks().forEach((t) => t.stop())
+				return
+			}
+			voiceStreamRef.current = stream
+			voiceChunksRef.current = []
+			const mimeType = pickSupportedAudioMime()
+			const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+			voiceRecorderRef.current = recorder
+
+			recorder.onerror = () => {
+				cancelVoiceRecording()
+			}
+
+			recorder.ondataavailable = (ev) => {
+				if (ev.data.size > 0) voiceChunksRef.current.push(ev.data)
+			}
+
+			recorder.onstop = async () => {
+				const shouldSend = voiceActionRef.current === 'send'
+				const finalMime = recorder.mimeType || mimeType || 'audio/webm'
+				const blob = new Blob(voiceChunksRef.current, { type: finalMime })
+				voiceChunksRef.current = []
+				voiceRecorderRef.current = null
+				cleanupVoiceInternals()
+				if (!isMountedRef.current) return
+				setIsRecordingVoice(false)
+
+				if (!shouldSend || blob.size === 0) {
+					setVoiceRecorderOpen(false)
+					setVoiceSeconds(0)
+					setVoiceLevelBars(Array(VOICE_LEVEL_BAR_COUNT).fill(18))
+					return
+				}
+
+				setIsUploadingVoice(true)
+				let tempBlobUrl: string | null = null
+				try {
+					const ext = finalMime.includes('mp4')
+						? 'm4a'
+						: finalMime.includes('ogg')
+							? 'ogg'
+							: 'webm'
+					const cleanMime = finalMime.split(';')[0] || `audio/${ext}`
+					const audioFile = new File([blob], `voice-${Date.now()}.${ext}`, { type: cleanMime })
+					const isLiveSignedIn = Boolean(session?.access_token && isLiveId(recordingSpaceId))
+
+					let asset: FileAsset
+					try {
+						const uploaded = await uploadFile(
+							audioFile,
+							isLiveId(recordingSpaceId) ? recordingSpaceId : undefined
+						)
+						asset = {
+							id: uploaded.id,
+							spaceId: recordingSpaceId,
+							filename: uploaded.filename,
+							contentType: uploaded.content_type,
+							sizeBytes: uploaded.size_bytes,
+							url: uploaded.url,
+							kind: 'audio',
+							createdAt: 'Just now',
+						}
+					} catch (err) {
+						if (isLiveSignedIn) {
+							throw err instanceof Error ? err : new Error('Voice upload failed')
+						}
+						tempBlobUrl = URL.createObjectURL(blob)
+						voiceObjectUrlsRef.current.add(tempBlobUrl)
+						asset = {
+							id: `local-${Date.now()}`,
+							spaceId: recordingSpaceId,
+							filename: audioFile.name,
+							contentType: cleanMime,
+							sizeBytes: audioFile.size,
+							url: tempBlobUrl,
+							kind: 'audio',
+							createdAt: 'Just now',
+						}
+					}
+
+					if (!isMountedRef.current) {
+						if (tempBlobUrl) {
+							voiceObjectUrlsRef.current.delete(tempBlobUrl)
+							URL.revokeObjectURL(tempBlobUrl)
+						}
+						return
+					}
+					await handleSendAsset(asset)
+				} catch (err) {
+					if (tempBlobUrl) {
+						voiceObjectUrlsRef.current.delete(tempBlobUrl)
+						URL.revokeObjectURL(tempBlobUrl)
+					}
+					showToast(err instanceof Error ? err.message : 'Voice upload failed')
+				} finally {
+					if (isMountedRef.current) {
+						setIsUploadingVoice(false)
+						setVoiceRecorderOpen(false)
+						setVoiceSeconds(0)
+						setVoiceLevelBars(Array(VOICE_LEVEL_BAR_COUNT).fill(18))
+					}
+				}
+			}
+
+			try {
+				const AudioCtx =
+					window.AudioContext ||
+					(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+				const audioCtx = new AudioCtx()
+				voiceAudioCtxRef.current = audioCtx
+				const source = audioCtx.createMediaStreamSource(stream)
+				const analyser = audioCtx.createAnalyser()
+				analyser.fftSize = 64
+				source.connect(analyser)
+				const freqData = new Uint8Array(analyser.frequencyBinCount)
+				const tick = () => {
+					analyser.getByteFrequencyData(freqData)
+					const bars: number[] = []
+					const step = Math.max(1, Math.floor(freqData.length / VOICE_LEVEL_BAR_COUNT))
+					for (let i = 0; i < VOICE_LEVEL_BAR_COUNT; i++) {
+						const val = freqData[i * step] ?? 0
+						bars.push(Math.max(16, Math.min(100, Math.round((val / 255) * 100))))
+					}
+					setVoiceLevelBars(bars)
+					voiceAnimFrameRef.current = requestAnimationFrame(tick)
+				}
+				voiceAnimFrameRef.current = requestAnimationFrame(tick)
+			} catch {
+				// Fallback to static bars if WebAudio is unavailable
+			}
+
+			voiceStartRef.current = Date.now()
+			setVoiceSeconds(0)
+			setVoiceRecorderOpen(true)
+			setIsRecordingVoice(true)
+			recorder.start(200)
+			voiceTimerRef.current = setInterval(() => {
+				setVoiceSeconds(Math.floor((Date.now() - voiceStartRef.current) / 1000))
+			}, 250)
+		} catch (err) {
+			cleanupVoiceInternals()
+			setIsRecordingVoice(false)
+			setVoiceRecorderOpen(false)
+			showToast(err instanceof Error ? err.message : 'Microphone access denied')
+		} finally {
+			voiceStartingRef.current = false
+		}
+	}
+
+	const stopAndSendVoiceRecording = () => {
+		hapticTap()
+		voiceActionRef.current = 'send'
+		if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
+			voiceRecorderRef.current.stop()
+		} else {
+			cancelVoiceRecording()
+		}
 	}
 
 	// Touch handlers: long-press vibration + context menu, double-tap instant reply
@@ -928,14 +1191,6 @@ export default function ConcordAppPage() {
 				{/* Conversation Stream (Generous Reading Width + Scrolls Smoothly Beneath Transparent Header) */}
 				<div className="flex-1 overflow-y-auto px-2.5 md:px-6 pt-[calc(5.2rem+env(safe-area-inset-top))] pb-4">
 					<div className="max-w-2xl mx-auto flex flex-col">
-						{/* Curator's Realm Note Pill tucked cleanly at top of stream */}
-						<div className="mb-3 rounded-2xl overflow-hidden">
-							<RealmNoteBar
-								note={activeRealm.note}
-								onEditNote={() => setNoteModalOpen(true)}
-							/>
-						</div>
-
 						{messages.length === 0 ? (
 							<div className="text-center py-20 space-y-2">
 								<div className="text-[18px] font-editorial italic text-[#9e998c]">
@@ -1022,14 +1277,14 @@ export default function ConcordAppPage() {
 											<div
 												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#243e34] text-[#edf3d2]'
+														? 'bg-[#073b26] text-[#eef7c8]'
 														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#243e34' : '#2d2722'}
+														color={msg.isSelf ? '#073b26' : '#2d2722'}
 													/>
 												)}
 
@@ -1122,7 +1377,7 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#243e34] text-[#edf3d2]'
+																? 'bg-[#073b26] text-[#eef7c8]'
 																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>
@@ -1168,86 +1423,158 @@ export default function ConcordAppPage() {
 					</div>
 				)}
 
-				{/* Message Composer (Whipped Espresso Input Box + Pale Lichen Send Button) */}
+				{/* Message Composer & Inline Voice Note Recorder */}
 				<form
 					onSubmit={handleSendMessage}
-					className={`px-3 pt-2 bg-[#1d1916] shrink-0 ${
+					className={`px-2.5 pt-2 bg-[#1d1916] shrink-0 ${
 						openTray === 'none' ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-2'
 					}`}
 				>
-					<div className="max-w-2xl mx-auto flex items-center gap-2 w-full">
-						<button
-							type="button"
-							title="Device gallery, files, camera, and voice"
-							aria-label="Open media drawer"
-							onClick={() => {
-								hapticTap()
-								setOpenTray((t) => (t === 'media' ? 'none' : 'media'))
-							}}
-							className={`w-11 h-11 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
-								openTray === 'media'
-									? 'bg-[#cedb9c] text-[#1d1916]'
-									: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
-							}`}
-						>
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-								<line x1="12" y1="5" x2="12" y2="19" />
-								<line x1="5" y1="12" x2="19" y2="12" />
-							</svg>
-						</button>
-
-						<div
-							className={`flex-1 min-w-0 flex items-center rounded-full bg-[#2a241f] pl-4 pr-1.5 py-1 transition-shadow ${
-								replyPulse || replyTo ? 'ring-2 ring-[#cedb9c]' : ''
-							}`}
-						>
-							<input
-								ref={composerInputRef}
-								type="text"
-								value={draft}
-								onFocus={() => {
-									setOrbBarExpanded(false)
-									setOpenTray('none')
-								}}
-								onChange={(e) => setDraft(e.target.value)}
-								placeholder={`Message ${activeSpace.name}…`}
-								className="flex-1 min-w-0 w-full bg-transparent py-2 text-[16px] text-[#edf3d2] placeholder:text-[#8f897c] focus:outline-none"
-							/>
+					{voiceRecorderOpen ? (
+						<div className="max-w-2xl mx-auto flex items-center gap-1.5 w-full">
 							<button
 								type="button"
-								title="Stickers & GIFs"
-								aria-label="Open Stickers and GIFs"
-								onClick={() => {
-									hapticTap()
-									setOpenTray((t) => (t === 'stickers' ? 'none' : 'stickers'))
-								}}
-								className={`w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
-									openTray === 'stickers'
-										? 'bg-[#cedb9c] text-[#1d1916]'
-										: 'text-[#9e998c] hover:text-[#edf3d2] hover:bg-white/10'
-								}`}
+								onClick={cancelVoiceRecording}
+								disabled={isUploadingVoice}
+								aria-label="Cancel voice recording"
+								title="Cancel recording"
+								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
 							>
-								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-									<circle cx="12" cy="12" r="9" />
-									<path d="M8 14s1.5 2 4 2 4-2 4-2" />
-									<line x1="9" y1="9" x2="9.01" y2="9" />
-									<line x1="15" y1="9" x2="15.01" y2="9" />
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+									<path d="M18 6L6 18" />
+									<path d="M6 6l12 12" />
+								</svg>
+							</button>
+
+							<div className="flex-1 min-w-0 h-10 rounded-full bg-[#2a241f] px-3 flex items-center gap-2.5">
+								<span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse shrink-0" />
+								<span className="text-[13px] font-mono font-semibold text-[#eef7c8] tabular-nums shrink-0">
+									{isUploadingVoice ? 'Sending…' : formatVoiceSeconds(voiceSeconds)}
+								</span>
+								<div className="flex-1 min-w-0 flex items-center justify-between gap-[2px] h-6 overflow-hidden">
+									{voiceLevelBars.map((height, idx) => (
+										<span
+											key={idx}
+											className="flex-1 rounded-full bg-[#cedb9c]/85 transition-[height] duration-75"
+											style={{ height: `${Math.max(18, height)}%` }}
+										/>
+									))}
+								</div>
+							</div>
+
+							<button
+								type="button"
+								onClick={stopAndSendVoiceRecording}
+								disabled={isUploadingVoice}
+								aria-label="Stop and send voice note"
+								title="Stop and send voice note"
+								className="w-10 h-10 rounded-full bg-[#073b26] text-[#eef7c8] hover:bg-[#0a4f33] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M12 19l7-7 3 3-7 7-3-3z" />
+									<path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+									<path d="M2 2l7.586 7.586" />
+									<circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none" />
 								</svg>
 							</button>
 						</div>
+					) : (
+						<div className="max-w-2xl mx-auto flex items-center gap-1.5 w-full">
+							{/* 1. Far Left: Cloud-Paperclip / Folio-Attach Button */}
+							<button
+								type="button"
+								title="Device gallery, files, and camera"
+								aria-label="Open media drawer"
+								onClick={() => {
+									hapticTap()
+									setOpenTray((t) => (t === 'media' ? 'none' : 'media'))
+								}}
+								className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
+									openTray === 'media'
+										? 'bg-[#cedb9c] text-[#1d1916]'
+										: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
+								}`}
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M7.5 17H6a4 4 0 0 1-.4-7.98A5.5 5.5 0 0 1 16.3 7.5a3.75 3.75 0 0 1 1.7 7.1" />
+									<path d="M14.8 11.8l-4.1 4.1a2.1 2.1 0 0 0 3 3l4.6-4.6a3.3 3.3 0 0 0-4.7-4.7l-4.2 4.2" />
+								</svg>
+							</button>
 
-						<button
-							type="submit"
-							disabled={!draft.trim()}
-							aria-label="Send message"
-							className="w-11 h-11 rounded-full bg-[#cedb9c] text-[#1d1916] hover:bg-[#dce7b0] disabled:bg-[#2a241f] disabled:text-[#6e695e] flex items-center justify-center transition cursor-pointer shrink-0"
-						>
-							<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-								<line x1="12" y1="19" x2="12" y2="5" />
-								<polyline points="5 12 12 5 19 12" />
-							</svg>
-						</button>
-					</div>
+							{/* 2. Center: Shorter Espresso Input Box + Stickers & GIFs Button */}
+							<div
+								className={`flex-1 min-w-0 flex items-center rounded-full bg-[#2a241f] pl-3.5 pr-1 py-0.5 transition-shadow ${
+									replyPulse || replyTo ? 'ring-2 ring-[#cedb9c]' : ''
+								}`}
+							>
+								<input
+									ref={composerInputRef}
+									type="text"
+									value={draft}
+									onFocus={() => {
+										setOrbBarExpanded(false)
+										setOpenTray('none')
+									}}
+									onChange={(e) => setDraft(e.target.value)}
+									placeholder={`Message ${activeSpace.name}…`}
+									className="flex-1 min-w-0 w-full bg-transparent py-2 text-[15px] text-[#edf3d2] placeholder:text-[#8f897c] focus:outline-none"
+								/>
+								<button
+									type="button"
+									title="Stickers & GIFs"
+									aria-label="Open Stickers and GIFs"
+									onClick={() => {
+										hapticTap()
+										setOpenTray((t) => (t === 'stickers' ? 'none' : 'stickers'))
+									}}
+									className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer shrink-0 ${
+										openTray === 'stickers'
+											? 'bg-[#cedb9c] text-[#1d1916]'
+											: 'text-[#9e998c] hover:text-[#edf3d2] hover:bg-white/10'
+									}`}
+								>
+									<svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<circle cx="12" cy="12" r="9" />
+										<path d="M8 14s1.5 2 4 2 4-2 4-2" />
+										<line x1="9" y1="9" x2="9.01" y2="9" />
+										<line x1="15" y1="9" x2="15.01" y2="9" />
+									</svg>
+								</button>
+							</div>
+
+							{/* 3. Right of Input: Fountain Pen Nib Send Button */}
+							<button
+								type="submit"
+								disabled={!draft.trim()}
+								aria-label="Send message"
+								title="Send message"
+								className="w-10 h-10 rounded-full bg-[#cedb9c] text-[#1d1916] hover:bg-[#dce7b0] disabled:bg-[#2a241f] disabled:text-[#6e695e] flex items-center justify-center transition cursor-pointer shrink-0"
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M12 19l7-7 3 3-7 7-3-3z" />
+									<path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+									<path d="M2 2l7.586 7.586" />
+									<circle cx="11" cy="11" r="1.5" fill="currentColor" stroke="none" />
+								</svg>
+							</button>
+
+							{/* 4. Far Right Edge: Dedicated Voice Note Mic Bubble */}
+							<button
+								type="button"
+								aria-label="Record voice note"
+								title="Record voice note"
+								onClick={() => void startInlineVoiceRecording()}
+								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#073b26] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
+							>
+								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<rect x="9" y="2.5" width="6" height="11" rx="3" />
+									<path d="M5 10.5a7 7 0 0 0 14 0" />
+									<line x1="12" y1="17.5" x2="12" y2="21.5" />
+									<line x1="8.5" y1="21.5" x2="15.5" y2="21.5" />
+								</svg>
+							</button>
+						</div>
+					)}
 				</form>
 
 				{/* Signal-Style Expandable Device Gallery Drawer */}
@@ -1588,16 +1915,6 @@ export default function ConcordAppPage() {
 						)
 						setActiveSpaceId(newSpace.id)
 					}}
-				/>
-			)}
-
-			{/* CURATOR REALM NOTE & MUSIC COMPOSER MODAL */}
-			{noteModalOpen && (
-				<RealmNoteModal
-					currentNote={activeRealm.note}
-					curatorName={session?.user.display_name || activeRealm.note?.curatorName || 'Galediç'}
-					onSave={handleSaveRealmNote}
-					onClose={() => setNoteModalOpen(false)}
 				/>
 			)}
 

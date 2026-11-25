@@ -160,7 +160,7 @@ export function LeftRealmsPanel({
 							hapticTap()
 							onCreateRealm()
 						}}
-						className="w-12 h-12 rounded-2xl bg-[#243e34] hover:bg-[#2d4d40] text-[#cedb9c] flex items-center justify-center transition cursor-pointer shrink-0"
+						className="w-12 h-12 rounded-2xl bg-[#083d29] hover:bg-[#0b5237] text-[#cedb9c] ring-1 ring-[#cedb9c]/40 flex items-center justify-center transition cursor-pointer shrink-0"
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
 							<line x1="12" y1="5" x2="12" y2="19" />
@@ -187,7 +187,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`relative aspect-square rounded-2xl p-2 flex items-center justify-center transition-all cursor-pointer ${
 										active
-											? 'bg-[#243e34] ring-2 ring-[#cedb9c]'
+											? 'bg-[#083d29] hover:bg-[#0b5237] ring-2 ring-[#cedb9c]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
@@ -219,14 +219,15 @@ export function LeftRealmsPanel({
 									}}
 									className={`group relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 text-center transition-all duration-200 cursor-pointer focus:outline-none ${
 										active
-											? 'bg-[#243e34] ring-2 ring-[#cedb9c]'
+											? 'bg-[#083d29] hover:bg-[#0b5237] ring-2 ring-[#cedb9c]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
 									{realm.unreadCount ? (
-										<span className="absolute top-2.5 right-2.5 min-w-5 h-5 px-1.5 rounded-full bg-[#cedb9c] text-[11px] font-bold text-[#1d1916] flex items-center justify-center">
-											{realm.unreadCount}
-										</span>
+										<span
+											aria-label={`${realm.unreadCount} unread`}
+											className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#cedb9c]"
+										/>
 									) : null}
 
 									<div className="relative">
@@ -275,7 +276,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl transition cursor-pointer text-left ${
 										active
-											? 'bg-[#243e34] text-[#edf3d2]'
+											? 'bg-[#083d29] hover:bg-[#0b5237] ring-1 ring-[#cedb9c]/70 text-[#edf3d2]'
 											: 'bg-transparent hover:bg-[#2a241f] text-[#e5ebcd]'
 									}`}
 								>
@@ -291,7 +292,7 @@ export function LeftRealmsPanel({
 										</div>
 									</div>
 									{realm.unreadCount ? (
-										<span className="min-w-6 h-6 px-2 rounded-full bg-[#cedb9c] text-[12px] font-bold text-[#1d1916] flex items-center justify-center">
+										<span className="text-[12px] font-semibold text-[#cedb9c] shrink-0">
 											{realm.unreadCount}
 										</span>
 									) : null}
@@ -302,8 +303,8 @@ export function LeftRealmsPanel({
 				)}
 			</div>
 
-			{/* Bottom Row: Sign In Pill + Settings Button */}
-			<div className="px-4 py-3.5 bg-[#1b1714] flex items-center gap-2.5 shrink-0">
+			{/* Bottom Row: Sign In + Settings Button */}
+			<div className="px-4 py-3.5 flex items-center gap-2.5 shrink-0">
 				{session ? (
 					<div className="flex-1 min-w-0 flex items-center justify-between gap-2 rounded-full bg-[#2a241f] pl-2 pr-3 py-1.5">
 						<a
@@ -319,7 +320,7 @@ export function LeftRealmsPanel({
 									className="w-9 h-9 rounded-full object-cover shrink-0"
 								/>
 							) : (
-								<div className="w-9 h-9 rounded-full bg-[#243e34] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
+								<div className="w-9 h-9 rounded-full bg-[#083d29] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
 									{session.user.display_name?.[0] || session.user.username?.[0]}
 								</div>
 							)}
@@ -333,7 +334,7 @@ export function LeftRealmsPanel({
 						<button
 							type="button"
 							onClick={onSignOut}
-							className="text-[12px] font-semibold text-[#9e998c] hover:text-[#edf3d2] px-2.5 py-1 rounded-full bg-[#1d1916] transition cursor-pointer shrink-0"
+							className="text-[12px] font-semibold text-[#9e998c] hover:text-[#edf3d2] px-2 py-1 transition cursor-pointer shrink-0"
 						>
 							Out
 						</button>
