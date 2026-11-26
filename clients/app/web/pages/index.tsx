@@ -1279,14 +1279,14 @@ export default function ConcordAppPage() {
 											<div
 												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#091410] text-[#f2fbd0]'
+														? 'bg-[#050a08] text-[#f2fbd0]'
 														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#091410' : '#2d2722'}
+														color={msg.isSelf ? '#050a08' : '#2d2722'}
 													/>
 												)}
 
@@ -1371,7 +1371,7 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#091410] text-[#f2fbd0]'
+																? 'bg-[#050a08] text-[#f2fbd0]'
 																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>
@@ -1462,7 +1462,7 @@ export default function ConcordAppPage() {
 								disabled={isUploadingVoice}
 								aria-label="Stop and send voice note"
 								title="Stop and send voice note"
-								className="w-10 h-10 rounded-full bg-[#091410] text-[#eef7c8] hover:bg-[#0e1f19] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#050a08] text-[#eef7c8] hover:bg-[#0a120f] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
 									<path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -1558,7 +1558,7 @@ export default function ConcordAppPage() {
 								aria-label="Record voice note"
 								title="Record voice note"
 								onClick={() => void startInlineVoiceRecording()}
-								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#091410] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#050a08] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 									<rect x="9" y="2.5" width="6" height="11" rx="3" />
