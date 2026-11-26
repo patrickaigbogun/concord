@@ -33,6 +33,14 @@ import { isUuid, safeMediaUrl } from '../../lib/url'
 import type { ChatMessage, FileAsset, Realm, RoomViewMode, Space } from '../../lib/types'
 import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
 import { CreateRealmModal, CreateSpaceModal } from '../components/CreateModals'
+import {
+	DocumentMessageCard,
+	ImageGroupCard,
+	LinkPreviewCard,
+	VideoMessageCard,
+	VoiceNotePlayer,
+	extractFirstUrl,
+} from '../components/MessageMedia'
 import { LeftRealmsPanel } from '../components/LeftRealmsPanel'
 import { RightSpacePanel } from '../components/RightSpacePanel'
 import { SpaceDetailsDrawer, type SpacePersonaState } from '../components/SpaceDetailsDrawer'
@@ -309,6 +317,7 @@ export default function ConcordAppPage() {
 	// Long-press context menu (anchored popover), message info (Check), selection mode
 	const [contextMenu, setContextMenu] = useState<{ msg: ChatMessage; x: number; y: number } | null>(null)
 	const [infoMsg, setInfoMsg] = useState<ChatMessage | null>(null)
+	const [lightboxImage, setLightboxImage] = useState<{ url: string; filename: string } | null>(null)
 	const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null)
 	const [selectionMode, setSelectionMode] = useState(false)
 	const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(() => new Set())
@@ -1275,69 +1284,84 @@ export default function ConcordAppPage() {
 												</div>
 											)}
 
-											{/* Expressive Comic Speech Bubble (Wide, Comfortable Reading Space) */}
-											<div
-												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
-													msg.isSelf
-														? 'bg-[#0d1c16] text-[#f2fbd0]'
-														: 'bg-[#2d2722] text-[#e5ebcd]'
-												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
-											>
-												{isLastInGroup && (
-													<SpeechBubbleTail
-														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#0d1c16' : '#2d2722'}
-													/>
-												)}
+												{(() => {
+													const att = msg.attachment
+													const mediaUrl = att ? safeMediaUrl(att.url) : null
+													const isStandaloneMedia =
+														Boolean(att && !msg.content && !msg.replyTo && (att.kind === 'image' || att.kind === 'video' || att.kind === 'doc'))
+													const firstUrl = msg.content ? extractFirstUrl(msg.content) : null
 
-												{msg.replyTo && (
-													<div className="mb-2 pl-2.5 border-l-2 border-[#cedb9c]/65 text-[13px] text-[#cedb9c]/85">
-														<span className="font-semibold text-[#edf3d2]">{msg.replyTo.authorName}: </span>
-														<span className="italic">{msg.replyTo.excerpt}</span>
-													</div>
-												)}
+													if (isStandaloneMedia && att) {
+														return (
+															<div className="max-w-[85%] md:max-w-[72%]">
+																{att.kind === 'image' && mediaUrl && (
+																	<ImageGroupCard
+																		images={[{ id: att.id, url: mediaUrl, filename: att.filename }]}
+																		onOpenLightbox={(url, filename) => setLightboxImage({ url, filename })}
+																	/>
+																)}
+																{att.kind === 'video' && mediaUrl && (
+																	<VideoMessageCard url={mediaUrl} filename={att.filename} />
+																)}
+																{att.kind === 'doc' && (
+																	<DocumentMessageCard asset={att} url={mediaUrl} />
+																)}
+															</div>
+														)
+													}
 
-												{msg.attachment && msg.attachment.kind === 'image' && safeMediaUrl(msg.attachment.url) && (
-													<img
-														src={safeMediaUrl(msg.attachment.url) ?? undefined}
-														alt={msg.attachment.filename}
-														className="rounded-xl max-h-72 object-cover mb-1.5"
-													/>
-												)}
+													return (
+														<div
+															className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
+																msg.isSelf
+																	? 'bg-[#0d1c16] text-[#f2fbd0]'
+																	: 'bg-[#2d2722] text-[#e5ebcd]'
+															} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
+														>
+															{isLastInGroup && (
+																<SpeechBubbleTail
+																	side={msg.isSelf ? 'right' : 'left'}
+																	color={msg.isSelf ? '#0d1c16' : '#2d2722'}
+																/>
+															)}
 
-												{msg.attachment && msg.attachment.kind === 'video' && safeMediaUrl(msg.attachment.url) && (
-													<video
-														src={safeMediaUrl(msg.attachment.url) ?? undefined}
-														controls
-														playsInline
-														className="rounded-xl max-h-72 w-full mb-1.5 bg-black"
-													/>
-												)}
+															{msg.replyTo && (
+																<div className="mb-2 pl-2.5 border-l-2 border-[#cedb9c]/65 text-[13px] text-[#cedb9c]/85">
+																	<span className="font-semibold text-[#edf3d2]">{msg.replyTo.authorName}: </span>
+																	<span className="italic">{msg.replyTo.excerpt}</span>
+																</div>
+															)}
 
-												{msg.attachment && msg.attachment.kind === 'audio' && safeMediaUrl(msg.attachment.url) && (
-													<div data-no-pane-swipe="true" className="mb-1.5 rounded-xl bg-black/25 px-3 py-2 space-y-1.5">
-														<div className="flex items-center justify-between gap-2 text-[13px] text-[#e5ebcd]/85">
-															<span className="truncate font-medium">{msg.attachment.filename}</span>
-															<span className="text-[11px] shrink-0">Voice</span>
+															{att && att.kind === 'image' && mediaUrl && (
+																<div className="mb-2">
+																	<ImageGroupCard
+																		images={[{ id: att.id, url: mediaUrl, filename: att.filename }]}
+																		onOpenLightbox={(url, filename) => setLightboxImage({ url, filename })}
+																	/>
+																</div>
+															)}
+
+															{att && att.kind === 'video' && mediaUrl && (
+																<div className="mb-2">
+																	<VideoMessageCard url={mediaUrl} filename={att.filename} />
+																</div>
+															)}
+
+															{att && att.kind === 'audio' && mediaUrl && (
+																<VoiceNotePlayer asset={att} url={mediaUrl} isSelf={msg.isSelf} />
+															)}
+
+															{att && att.kind === 'doc' && (
+																<div className="mb-2">
+																	<DocumentMessageCard asset={att} url={mediaUrl} />
+																</div>
+															)}
+
+															{msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
+															{firstUrl && <LinkPreviewCard url={firstUrl} />}
 														</div>
-														<audio
-															src={safeMediaUrl(msg.attachment.url) ?? undefined}
-															controls
-															preload="metadata"
-															className="w-full h-9"
-														/>
-													</div>
-												)}
-
-												{msg.attachment && msg.attachment.kind === 'doc' && (
-													<div className="mb-1.5 rounded-xl bg-black/20 px-3 py-2 text-[14px] flex items-center justify-between gap-3">
-														<span className="font-mono truncate">{msg.attachment.filename}</span>
-														<span className="text-[12px] font-semibold text-[#cedb9c] shrink-0">Doc</span>
-													</div>
-												)}
-
-												{msg.content && <p className="whitespace-pre-wrap break-words">{msg.content}</p>}
-											</div>
+													)
+												})()}
 										</div>
 
 										{/* Sender Name, Timestamp & Kept Indicator Underneath Bubble */}
@@ -2006,6 +2030,31 @@ export default function ConcordAppPage() {
 							</div>
 						</div>
 					</div>
+				</div>
+			)}
+
+			{lightboxImage && (
+				<div
+					onClick={() => setLightboxImage(null)}
+					className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+				>
+					<button
+						type="button"
+						onClick={() => setLightboxImage(null)}
+						aria-label="Close image"
+						className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition"
+					>
+						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+							<line x1="18" y1="6" x2="6" y2="18" />
+							<line x1="6" y1="6" x2="18" y2="18" />
+						</svg>
+					</button>
+					<img
+						src={lightboxImage.url}
+						alt={lightboxImage.filename}
+						onClick={(e) => e.stopPropagation()}
+						className="max-w-full max-h-[88dvh] rounded-2xl object-contain shadow-2xl"
+					/>
 				</div>
 			)}
 		</div>
