@@ -10,8 +10,8 @@ interface SpaceOrbBarProps {
 	onSelectSpace: (spaceId: string) => void
 }
 
-const DIAL_RADIUS = 220
-const STEP_DEG = 22
+const DIAL_RADIUS = 260
+const STEP_DEG = 15
 const PX_PER_SLOT = DIAL_RADIUS * ((STEP_DEG * Math.PI) / 180)
 const VISIBLE_HALF_SLOTS = 3 // Renders 7 slots: -3..+3 centered at 0° (12 o'clock)
 
@@ -188,7 +188,7 @@ export function SpaceOrbBar({
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className="px-4 pt-1 pb-1.5 flex flex-col items-center select-none"
+			className="pointer-events-none px-4 pt-0.5 pb-1 flex flex-col items-center select-none bg-transparent"
 		>
 			{/* Minimal Collapsible Toggle Handle (No pill badge clutter) */}
 			<button
@@ -197,7 +197,7 @@ export function SpaceOrbBar({
 					hapticTap()
 					onToggleExpanded()
 				}}
-				className="group flex items-center gap-2 px-3 py-1 rounded-xl hover:bg-[#2a241f]/70 text-[13px] text-[#e5ebcd] transition cursor-pointer"
+				className="pointer-events-auto group flex items-center gap-2 px-3 py-1 rounded-full bg-[#050a08]/55 backdrop-blur-md hover:bg-[#2a241f]/75 text-[13px] text-[#e5ebcd] transition cursor-pointer"
 			>
 				<span className="w-2 h-2 rounded-full bg-[#cedb9c]" />
 				<span className="font-semibold text-[#edf3d2]">{centeredSpace?.name}</span>
@@ -223,12 +223,12 @@ export function SpaceOrbBar({
 					onPointerMove={handlePointerMove}
 					onPointerUp={finishDrag}
 					onPointerCancel={finishDrag}
-					className={`relative w-full max-w-md h-[126px] mt-1 overflow-hidden touch-none ${
+					className={`pointer-events-auto relative w-full max-w-md h-[102px] mt-0.5 overflow-hidden touch-none bg-transparent ${
 						isDragging ? 'cursor-grabbing' : 'cursor-grab'
 					}`}
 					aria-label="Space rotary dial. Swipe left or right to switch spaces."
 				>
-					{/* Orbs positioned on invisible circular arc R = 220px, 22° spacing, centered at 12 o'clock */}
+					{/* Orbs positioned on invisible circular arc R = 260px, 15° spacing, centered at 12 o'clock */}
 					{slots.map((slotIdx) => {
 						const space = visibleSpaces[mod(slotIdx, count)]
 						const delta = slotIdx - dialPos
@@ -239,8 +239,8 @@ export function SpaceOrbBar({
 
 						const dist = Math.abs(delta)
 						const isCenter = dist < 0.45
-						const scale = Math.max(0.72, 1.12 - dist * 0.14)
-						const opacity = Math.max(0, Math.min(1, 1.08 - dist * 0.3))
+						const scale = Math.max(0.76, 1.1 - dist * 0.12)
+						const opacity = Math.max(0, Math.min(1, 1.08 - dist * 0.28))
 						const label = formatOrbLabel(space.name)
 
 						return (
@@ -252,7 +252,7 @@ export function SpaceOrbBar({
 									opacity: Number(opacity.toFixed(3)),
 									zIndex: Math.round(20 - dist * 4),
 								}}
-								className={`pointer-events-none absolute left-1/2 top-[38px] flex flex-col items-center ${
+								className={`pointer-events-none absolute left-1/2 top-[42px] flex flex-col items-center ${
 									isDragging ? '' : 'transition-[transform,opacity] duration-300 ease-out'
 								}`}
 							>
