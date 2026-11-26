@@ -903,7 +903,7 @@ func (svc *StorageService) putR2Object(ctx context.Context, key string, file *os
 			return err
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, file)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, io.NopCloser(file))
 		if err != nil {
 			return err
 		}
