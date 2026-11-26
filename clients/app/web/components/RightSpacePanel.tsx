@@ -399,7 +399,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 	const fullscreenPdfUrl = fullscreenPdf ? safeStorageUrl(fullscreenPdf.url, true) : null
 
 	return (
-		<aside className="h-full flex flex-col bg-[#221d19] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+		<aside className="h-full flex flex-col bg-[#08100d] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			{/* Space Header (No Back button — swipe to close) */}
 			<div className="px-4 pt-4 pb-3 flex items-center gap-3">
 				<div
@@ -415,7 +415,7 @@ export function RightSpacePanel({ space, files }: RightSpacePanelProps) {
 
 			{/* 3 Clean Tabs: Media | Docs | Links */}
 			<div className="px-4 pb-3.5">
-				<div className="grid grid-cols-3 gap-1 bg-[#1b1714] p-1 rounded-2xl">
+				<div className="grid grid-cols-3 gap-1 bg-[#050a08] p-1 rounded-2xl">
 					{(
 						[
 							['media', 'Media'],

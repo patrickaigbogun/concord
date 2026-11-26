@@ -111,7 +111,7 @@ export function SpaceDetailsDrawer({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="relative w-full sm:max-w-lg h-[86dvh] sm:h-auto sm:max-h-[86dvh] rounded-t-3xl sm:rounded-3xl bg-[#221d19] shadow-2xl flex flex-col overflow-hidden"
+				className="relative w-full sm:max-w-lg h-[86dvh] sm:h-auto sm:max-h-[86dvh] rounded-t-3xl sm:rounded-3xl bg-[#08100d] shadow-2xl flex flex-col overflow-hidden"
 			>
 				{/* Scrollable Content */}
 				<div className="flex-1 overflow-y-auto no-scrollbar pb-24">

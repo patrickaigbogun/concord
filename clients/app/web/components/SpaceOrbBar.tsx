@@ -259,13 +259,13 @@ export function SpaceOrbBar({
 								<div
 									className={`relative w-12 h-12 rounded-full flex items-center justify-center font-semibold text-[#edf3d2] transition-colors duration-200 ${
 										isCenter
-											? 'bg-[#050a08] text-[12px] ring-2 ring-[#cedb9c] ring-offset-2 ring-offset-[#1d1916] shadow-lg shadow-black/50'
+											? 'bg-[#0f1f19] text-[12px] ring-2 ring-[#cedb9c] ring-offset-2 ring-offset-[#050a08] shadow-lg shadow-black/50'
 											: `bg-gradient-to-br ${space.orbGradient} text-[11px]`
 									}`}
 								>
 									<span>{label}</span>
 									{space.unread && !isCenter ? (
-										<span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#cedb9c] ring-2 ring-[#1d1916]" />
+										<span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#cedb9c] ring-2 ring-[#050a08]" />
 									) : null}
 								</div>
 							</div>

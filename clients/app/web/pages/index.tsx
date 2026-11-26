@@ -1088,7 +1088,7 @@ export default function ConcordAppPage() {
 					e.preventDefault()
 				}
 			}}
-			className="h-[100dvh] w-full overflow-hidden bg-[#1d1916] text-[#e5ebcd] flex relative select-none"
+			className="h-[100dvh] w-full overflow-hidden bg-[#050a08] text-[#e5ebcd] flex relative select-none"
 		>
 			{/* LEFT PANEL: Visual Realms Grid */}
 			<div
@@ -1129,7 +1129,7 @@ export default function ConcordAppPage() {
 			)}
 
 			{/* CENTER STAGE: Active Space Conversation */}
-			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#1d1916] relative">
+			<main className="flex-1 min-w-0 h-full flex flex-col bg-[#050a08] relative">
 				{/* Transparent Floating Top Bar: ONLY the Centered Floating Space Orb + Pill Name */}
 				{selectionMode ? (
 					<header className="px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between gap-3 shrink-0 bg-[#241f1b] z-20">
@@ -1172,7 +1172,7 @@ export default function ConcordAppPage() {
 									{activeSpace.name[0]}
 								</div>
 								{socketState === 'connected' && (
-									<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#cedb9c] ring-2 ring-[#1d1916]" />
+									<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#cedb9c] ring-2 ring-[#050a08]" />
 								)}
 							</div>
 							<div className="inline-flex items-center gap-1 px-3.5 py-0.5 rounded-full bg-[#2a241f]/90 backdrop-blur-md shadow-md shadow-black/35 group-hover:bg-[#352e27] transition max-w-[200px]">
@@ -1279,14 +1279,14 @@ export default function ConcordAppPage() {
 											<div
 												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#050a08] text-[#f2fbd0]'
+														? 'bg-[#0d1c16] text-[#f2fbd0]'
 														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#050a08' : '#2d2722'}
+														color={msg.isSelf ? '#0d1c16' : '#2d2722'}
 													/>
 												)}
 
@@ -1371,7 +1371,7 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#050a08] text-[#f2fbd0]'
+																? 'bg-[#0d1c16] text-[#f2fbd0]'
 																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>
@@ -1420,7 +1420,7 @@ export default function ConcordAppPage() {
 				{/* Message Composer & Inline Voice Note Recorder */}
 				<form
 					onSubmit={handleSendMessage}
-					className={`px-2.5 pt-2 bg-[#1d1916] shrink-0 ${
+					className={`px-2.5 pt-2 bg-[#050a08] shrink-0 ${
 						openTray === 'none' ? 'pb-[max(0.75rem,env(safe-area-inset-bottom))]' : 'pb-2'
 					}`}
 				>
@@ -1462,7 +1462,7 @@ export default function ConcordAppPage() {
 								disabled={isUploadingVoice}
 								aria-label="Stop and send voice note"
 								title="Stop and send voice note"
-								className="w-10 h-10 rounded-full bg-[#050a08] text-[#eef7c8] hover:bg-[#0a120f] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#0d1c16] text-[#eef7c8] hover:bg-[#0a120f] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
 									<path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -1558,7 +1558,7 @@ export default function ConcordAppPage() {
 								aria-label="Record voice note"
 								title="Record voice note"
 								onClick={() => void startInlineVoiceRecording()}
-								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#050a08] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#0d1c16] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 									<rect x="9" y="2.5" width="6" height="11" rx="3" />

@@ -42,7 +42,7 @@ export function LeftRealmsPanel({
 	}, [realms, query])
 
 	return (
-		<aside className="h-full flex flex-col bg-[#221d19] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+		<aside className="h-full flex flex-col bg-[#08100d] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			{/* Centered Brand Header: Concord Logo + "Realms" Wordmark */}
 			<div className="px-5 pt-6 pb-4 flex flex-col items-center text-center gap-2 shrink-0">
 				<svg className="w-12 h-12 text-[#cedb9c] overflow-visible" viewBox="-8 -8 116 116" fill="none" aria-label="Concord">
@@ -79,7 +79,7 @@ export function LeftRealmsPanel({
 
 			{/* Large, Prominent Grid View Toggles + Create Realm Button */}
 			<div className="px-4 pb-4 flex items-center gap-2.5 shrink-0">
-				<div className="flex-1 grid grid-cols-3 gap-1.5 rounded-2xl bg-[#1b1714] p-1.5">
+				<div className="flex-1 grid grid-cols-3 gap-1.5 rounded-2xl bg-[#050a08] p-1.5">
 					<button
 						type="button"
 						title="Orbs Grid"
@@ -160,7 +160,7 @@ export function LeftRealmsPanel({
 							hapticTap()
 							onCreateRealm()
 						}}
-						className="w-12 h-12 rounded-2xl bg-[#050a08] hover:bg-[#0a120f] text-[#f2fbd0] flex items-center justify-center transition cursor-pointer shrink-0"
+						className="w-12 h-12 rounded-2xl bg-[#0f1f19] hover:bg-[#152a22] text-[#f2fbd0] flex items-center justify-center transition cursor-pointer shrink-0"
 					>
 						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
 							<line x1="12" y1="5" x2="12" y2="19" />
@@ -187,7 +187,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`relative aspect-square rounded-2xl p-2 flex items-center justify-center transition-all cursor-pointer ${
 										active
-											? 'bg-[#050a08] hover:bg-[#0a120f]'
+											? 'bg-[#0f1f19] hover:bg-[#152a22]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
@@ -219,7 +219,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`group relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 text-center transition-all duration-200 cursor-pointer focus:outline-none ${
 										active
-											? 'bg-[#050a08] hover:bg-[#0a120f]'
+											? 'bg-[#0f1f19] hover:bg-[#152a22]'
 											: 'bg-[#2a241f] hover:bg-[#332c26]'
 									}`}
 								>
@@ -276,7 +276,7 @@ export function LeftRealmsPanel({
 									}}
 									className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl transition cursor-pointer text-left ${
 										active
-											? 'bg-[#050a08] hover:bg-[#0a120f] text-[#edf3d2]'
+											? 'bg-[#0f1f19] hover:bg-[#152a22] text-[#edf3d2]'
 											: 'bg-transparent hover:bg-[#2a241f] text-[#e5ebcd]'
 									}`}
 								>
@@ -320,7 +320,7 @@ export function LeftRealmsPanel({
 									className="w-9 h-9 rounded-full object-cover shrink-0"
 								/>
 							) : (
-								<div className="w-9 h-9 rounded-full bg-[#050a08] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
+								<div className="w-9 h-9 rounded-full bg-[#0f1f19] flex items-center justify-center text-[14px] font-bold text-[#cedb9c] shrink-0">
 									{session.user.display_name?.[0] || session.user.username?.[0]}
 								</div>
 							)}

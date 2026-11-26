@@ -438,7 +438,7 @@ export function AttachmentTray({
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className={`bg-[#221d19] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
+			className={`bg-[#08100d] rounded-t-3xl flex flex-col select-none transition-[height] duration-300 ease-out shrink-0 ${
 				expanded ? 'h-[82dvh]' : 'h-[46dvh] min-h-[300px]'
 			}`}
 		>
