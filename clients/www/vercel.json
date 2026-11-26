@@ -2,11 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "bun install && (cd ../app && bun install)",
-  "buildCommand": "bun run build && rm -f build/server && mkdir -p build/app build/download build/auth/callback && cp build/index.html build/app/index.html && cp build/index.html build/download/index.html && cp build/index.html build/auth/callback/index.html",
+  "buildCommand": "bun run build && rm -f build/server && mkdir -p build/download && cp build/index.html build/download/index.html && (cd ../app && bun run build) && rm -rf build/app build/auth build/app-assets && mkdir -p build/app build/auth/callback build/app-assets && cp -r ../app/build/assets/* build/app-assets/ && sed 's|/assets/|/app-assets/|g' ../app/build/index.html > build/app/index.html && cp build/app/index.html build/auth/callback/index.html",
   "outputDirectory": "build",
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon\\.).*)",
+      "source": "/app/(.*)",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/auth/callback/index.html"
+    },
+    {
+      "source": "/((?!assets/|app-assets/|app|auth/|favicon\\.).*)",
       "destination": "/index.html"
     }
   ]

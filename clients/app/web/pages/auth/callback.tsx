@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { completeSignIn } from '../../../lib/auth'
+import { isTauri } from '../../../lib/config'
 
 export const metadata = { title: 'Signing in — Concord' }
 
@@ -9,7 +10,7 @@ export default function AuthCallbackPage() {
 	useEffect(() => {
 		completeSignIn(window.location.href)
 			.then(() => {
-				window.location.href = '/'
+				window.location.href = isTauri() ? '/' : '/app'
 			})
 			.catch((err) => {
 				setError(err instanceof Error ? err.message : 'Sign-in failed')
