@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "bun install && (cd ../app && bun install)",
-  "buildCommand": "bun run build && rm -f build/server && mkdir -p build/download && cp build/index.html build/download/index.html && (cd ../app && bun run build) && rm -rf build/app build/auth build/app-assets && mkdir -p build/app build/auth/callback build/app-assets && cp -r ../app/build/assets/* build/app-assets/ && sed 's|/assets/|/app-assets/|g' ../app/build/index.html > build/app/index.html && cp build/app/index.html build/auth/callback/index.html",
+  "buildCommand": "bun run build:vercel",
   "outputDirectory": "build",
   "rewrites": [
     {

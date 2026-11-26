@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "bun core/bootstrap/dev.ts",
     "build": "bun core/bootstrap/build.ts",
+    "build:vercel": "bun run build && rm -f build/server && mkdir -p build/download && cp build/index.html build/download/index.html && (cd ../app && bun run build) && rm -rf build/app build/auth build/app-assets && mkdir -p build/app build/auth/callback build/app-assets && cp -r ../app/build/assets/* build/app-assets/ && sed 's|/assets/|/app-assets/|g' ../app/build/index.html > build/app/index.html && cp build/app/index.html build/auth/callback/index.html",
     "start": "NODE_ENV=production ./build/server",
     "generate:api": "bun -e \"import { generateApi } from './packages/pie/src/generator'; await generateApi({ spec: '../../server/api/priv/static/openapi.json', outTs: './core/api/generated.ts', defaultBaseUrl: 'http://localhost:4000' });\""
   },
