@@ -306,13 +306,13 @@ export default function ConcordAppPage() {
 	const isMountedRef = useRef(true)
 	const voiceObjectUrlsRef = useRef<Set<string>>(new Set())
 
-	// Long-press context menu, selection mode, kept/checked/forward states
-	const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null)
+	// Long-press context menu (anchored popover), message info (Check), selection mode
+	const [contextMenu, setContextMenu] = useState<{ msg: ChatMessage; x: number; y: number } | null>(null)
+	const [infoMsg, setInfoMsg] = useState<ChatMessage | null>(null)
 	const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null)
 	const [selectionMode, setSelectionMode] = useState(false)
 	const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(() => new Set())
 	const [keptMsgIds, setKeptMsgIds] = useState<Set<string>>(() => new Set())
-	const [checkedMsgIds, setCheckedMsgIds] = useState<Set<string>>(() => new Set())
 	const [toastMsg, setToastMsg] = useState<string | null>(null)
 
 	const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -543,7 +543,8 @@ export default function ConcordAppPage() {
 	}
 
 	useEffect(() => {
-		setContextMsg(null)
+		setContextMenu(null)
+		setInfoMsg(null)
 		setSelectionMode(false)
 		setSelectedMsgIds(new Set())
 		setReplyTo(null)
@@ -570,10 +571,20 @@ export default function ConcordAppPage() {
 		}
 	}, [])
 
+	const openContextMenuAt = (msg: ChatMessage, clientX: number, clientY: number) => {
+		const menuW = 228
+		const menuH = 340
+		const vw = typeof window !== 'undefined' ? window.innerWidth : 390
+		const vh = typeof window !== 'undefined' ? window.innerHeight : 844
+		const x = Math.max(12, Math.min(clientX - menuW / 2, vw - menuW - 12))
+		const y = Math.max(16, Math.min(clientY - 40, vh - menuH - 16))
+		setContextMenu({ msg, x, y })
+	}
+
 	const triggerReply = (msg: ChatMessage) => {
 		hapticReply()
 		setReplyTo(msg)
-		setContextMsg(null)
+		setContextMenu(null)
 		setOpenTray('none')
 		setOrbBarExpanded(false)
 		setReplyPulse(true)
@@ -739,7 +750,7 @@ export default function ConcordAppPage() {
 				return { ...m, reactions: list }
 			}),
 		}))
-		setContextMsg(null)
+		setContextMenu(null)
 
 		if (session?.access_token && isLiveId(msgId)) {
 			try {
@@ -760,7 +771,7 @@ export default function ConcordAppPage() {
 		} catch {
 			showToast('Could not copy')
 		}
-		setContextMsg(null)
+		setContextMenu(null)
 	}
 
 	const handleDeleteMessages = (ids: string[]) => {
@@ -770,7 +781,8 @@ export default function ConcordAppPage() {
 			...prev,
 			[activeSpace.id]: (prev[activeSpace.id] || []).filter((m) => !idSet.has(m.id)),
 		}))
-		setContextMsg(null)
+		setContextMenu(null)
+		setInfoMsg(null)
 		setSelectionMode(false)
 		setSelectedMsgIds(new Set())
 		showToast(ids.length > 1 ? `Deleted ${ids.length} messages` : 'Message deleted')
@@ -800,18 +812,7 @@ export default function ConcordAppPage() {
 			}
 			return next
 		})
-		setContextMsg(null)
-	}
-
-	const toggleCheckedMsg = (id: string) => {
-		hapticTap()
-		setCheckedMsgIds((prev) => {
-			const next = new Set(prev)
-			if (next.has(id)) next.delete(id)
-			else next.add(id)
-			return next
-		})
-		setContextMsg(null)
+		setContextMenu(null)
 	}
 
 	const startInlineVoiceRecording = async () => {
@@ -997,13 +998,15 @@ export default function ConcordAppPage() {
 	const onMessageTouchStart = (msg: ChatMessage, e: React.TouchEvent) => {
 		if (selectionMode) return
 		const t = e.touches[0]
-		longPressOriginRef.current = { x: t.clientX, y: t.clientY }
+		const tx = t.clientX
+		const ty = t.clientY
+		longPressOriginRef.current = { x: tx, y: ty }
 		longPressTriggeredRef.current = false
 		if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
 		longPressTimerRef.current = setTimeout(() => {
 			longPressTriggeredRef.current = true
 			hapticMenu()
-			setContextMsg(msg)
+			openContextMenuAt(msg, tx, ty)
 		}, 420)
 	}
 
@@ -1207,7 +1210,6 @@ export default function ConcordAppPage() {
 								const avatarUrl = safeMediaUrl(msg.authorAvatar)
 								const isSelected = selectedMsgIds.has(msg.id)
 								const isKept = keptMsgIds.has(msg.id)
-								const isChecked = checkedMsgIds.has(msg.id)
 
 								return (
 									<div
@@ -1216,7 +1218,7 @@ export default function ConcordAppPage() {
 										onContextMenu={(e) => {
 											e.preventDefault()
 											hapticMenu()
-											setContextMsg(msg)
+											openContextMenuAt(msg, e.clientX, e.clientY)
 										}}
 										onClick={() => selectionMode && toggleSelectMsg(msg.id)}
 										onTouchStart={(e) => onMessageTouchStart(msg, e)}
@@ -1277,14 +1279,14 @@ export default function ConcordAppPage() {
 											<div
 												className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
 													msg.isSelf
-														? 'bg-[#031f14] text-[#f2fbd0]'
+														? 'bg-[#091410] text-[#f2fbd0]'
 														: 'bg-[#2d2722] text-[#e5ebcd]'
 												} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
 											>
 												{isLastInGroup && (
 													<SpeechBubbleTail
 														side={msg.isSelf ? 'right' : 'left'}
-														color={msg.isSelf ? '#031f14' : '#2d2722'}
+														color={msg.isSelf ? '#091410' : '#2d2722'}
 													/>
 												)}
 
@@ -1338,8 +1340,8 @@ export default function ConcordAppPage() {
 											</div>
 										</div>
 
-										{/* Sender Name, Timestamp, Kept & Checked Indicators Underneath Bubble */}
-										{(isLastInGroup || isKept || isChecked) && (
+										{/* Sender Name, Timestamp & Kept Indicator Underneath Bubble */}
+										{(isLastInGroup || isKept) && (
 											<div
 												className={`flex items-center gap-2 mt-1 ${
 													msg.isSelf ? 'pr-2.5 justify-end' : 'pl-9 justify-start'
@@ -1353,14 +1355,6 @@ export default function ConcordAppPage() {
 												)}
 												{isKept && (
 													<span className="text-[11px] font-semibold text-[#cedb9c]">Kept</span>
-												)}
-												{isChecked && (
-													<span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#cedb9c]">
-														<svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-															<polyline points="20 6 9 17 4 12" />
-														</svg>
-														Checked
-													</span>
 												)}
 											</div>
 										)}
@@ -1377,7 +1371,7 @@ export default function ConcordAppPage() {
 														}}
 														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
 															r.reacted
-																? 'bg-[#031f14] text-[#f2fbd0]'
+																? 'bg-[#091410] text-[#f2fbd0]'
 																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
 														}`}
 													>
@@ -1468,7 +1462,7 @@ export default function ConcordAppPage() {
 								disabled={isUploadingVoice}
 								aria-label="Stop and send voice note"
 								title="Stop and send voice note"
-								className="w-10 h-10 rounded-full bg-[#073b26] text-[#eef7c8] hover:bg-[#0a4f33] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#091410] text-[#eef7c8] hover:bg-[#0e1f19] disabled:opacity-50 flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
 									<path d="M12 19l7-7 3 3-7 7-3-3z" />
@@ -1564,7 +1558,7 @@ export default function ConcordAppPage() {
 								aria-label="Record voice note"
 								title="Record voice note"
 								onClick={() => void startInlineVoiceRecording()}
-								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#073b26] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
+								className="w-10 h-10 rounded-full bg-[#2a241f] text-[#e5ebcd] hover:bg-[#091410] hover:text-[#eef7c8] flex items-center justify-center transition cursor-pointer shrink-0"
 							>
 								<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 									<rect x="9" y="2.5" width="6" height="11" rx="3" />
@@ -1615,60 +1609,54 @@ export default function ConcordAppPage() {
 				/>
 			</div>
 
-			{/* LONG-PRESS MESSAGE CONTEXT MENU (Reply, Copy text, Select message, Forward, Delete, Keep, Check) */}
-			{contextMsg && (
+			{/* FLOATING ELEVATED CONTEXT MENU (No backdrop blur/dim, anchored popover with deep shadow) */}
+			{contextMenu && (
 				<div
 					data-no-pane-swipe="true"
-					onClick={() => setContextMsg(null)}
-					className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+					onClick={() => setContextMenu(null)}
+					className="fixed inset-0 z-50 bg-transparent"
 				>
 					<div
 						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-sm space-y-2.5"
+						style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+						className="fixed w-[228px] space-y-2"
 					>
-						{/* Quick Reactions Strip */}
-						<div className="flex items-center justify-around px-3 py-2 rounded-full bg-[#171720] shadow-xl">
+						{/* Quick Reactions Bar */}
+						<div className="flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[#241f1b] shadow-[0_14px_40px_rgba(0,0,0,0.72)]">
 							{QUICK_REACTIONS.map((emoji) => (
 								<button
 									key={emoji}
 									type="button"
-									onClick={() => void handleToggleReaction(contextMsg.id, emoji)}
-									className="w-10 h-10 rounded-full hover:bg-white/10 active:scale-110 text-xl flex items-center justify-center transition cursor-pointer"
+									onClick={() => void handleToggleReaction(contextMenu.msg.id, emoji)}
+									className="w-8 h-8 rounded-full hover:bg-white/10 active:scale-110 text-lg flex items-center justify-center transition cursor-pointer"
 								>
 									{emoji}
 								</button>
 							))}
 						</div>
 
-						{/* Message Preview Snippet */}
-						{contextMsg.content && (
-							<div className="px-4 py-2.5 rounded-2xl bg-[#14141c] text-[14px] text-zinc-300 line-clamp-2">
-								{contextMsg.content}
-							</div>
-						)}
-
-						{/* Context Menu Actions */}
-						<div className="rounded-3xl bg-[#171720] overflow-hidden divide-y divide-white/[0.06] shadow-2xl">
+						{/* Elevated Context Menu Popover */}
+						<div className="rounded-2xl bg-[#241f1b] py-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.78)]">
 							<button
 								type="button"
-								onClick={() => triggerReply(contextMsg)}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								onClick={() => triggerReply(contextMenu.msg)}
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 							>
 								<span>Reply</span>
-								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<polyline points="9 17 4 12 9 7" />
 									<path d="M20 18v-2a4 4 0 0 0-4-4H4" />
 								</svg>
 							</button>
 
-							{contextMsg.content && (
+							{contextMenu.msg.content && (
 								<button
 									type="button"
-									onClick={() => void handleCopyMessage(contextMsg)}
-									className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+									onClick={() => void handleCopyMessage(contextMenu.msg)}
+									className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 								>
 									<span>Copy text</span>
-									<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 										<rect x="9" y="9" width="13" height="13" rx="2" />
 										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
 									</svg>
@@ -1680,13 +1668,13 @@ export default function ConcordAppPage() {
 								onClick={() => {
 									hapticTap()
 									setSelectionMode(true)
-									setSelectedMsgIds(new Set([contextMsg.id]))
-									setContextMsg(null)
+									setSelectedMsgIds(new Set([contextMenu.msg.id]))
+									setContextMenu(null)
 								}}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 							>
 								<span>Select message</span>
-								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<circle cx="12" cy="12" r="9" />
 									<polyline points="9 12 11 14 15 10" />
 								</svg>
@@ -1696,13 +1684,13 @@ export default function ConcordAppPage() {
 								type="button"
 								onClick={() => {
 									hapticTap()
-									setForwardMsg(contextMsg)
-									setContextMsg(null)
+									setForwardMsg(contextMenu.msg)
+									setContextMenu(null)
 								}}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 							>
 								<span>Forward</span>
-								<svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<polyline points="15 17 20 12 15 7" />
 									<path d="M4 18v-2a4 4 0 0 1 4-4h12" />
 								</svg>
@@ -1710,30 +1698,36 @@ export default function ConcordAppPage() {
 
 							<button
 								type="button"
-								onClick={() => toggleKeptMsg(contextMsg.id)}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								onClick={() => toggleKeptMsg(contextMenu.msg.id)}
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 							>
-								<span>{keptMsgIds.has(contextMsg.id) ? 'Unkeep' : 'Keep'}</span>
-								<svg className="w-4 h-4 text-[#c4b5fd]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<span>{keptMsgIds.has(contextMenu.msg.id) ? 'Unkeep' : 'Keep'}</span>
+								<svg className="w-4 h-4 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 									<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
 								</svg>
 							</button>
 
 							<button
 								type="button"
-								onClick={() => toggleCheckedMsg(contextMsg.id)}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-white hover:bg-white/[0.06] flex items-center justify-between cursor-pointer"
+								onClick={() => {
+									hapticTap()
+									setInfoMsg(contextMenu.msg)
+									setContextMenu(null)
+								}}
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 							>
-								<span>{checkedMsgIds.has(contextMsg.id) ? 'Uncheck' : 'Check'}</span>
-								<svg className="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-									<polyline points="20 6 9 17 4 12" />
+								<span>Check</span>
+								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<circle cx="12" cy="12" r="9" />
+									<line x1="12" y1="16" x2="12" y2="12" />
+									<line x1="12" y1="8" x2="12.01" y2="8" />
 								</svg>
 							</button>
 
 							<button
 								type="button"
-								onClick={() => handleDeleteMessages([contextMsg.id])}
-								className="w-full px-5 py-3.5 text-left text-[15px] font-semibold text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
+								onClick={() => handleDeleteMessages([contextMenu.msg.id])}
+								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
 							>
 								<span>Delete</span>
 								<svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1741,6 +1735,51 @@ export default function ConcordAppPage() {
 									<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
 								</svg>
 							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* MESSAGE INFO POPOVER (Opened by "Check" in context menu: Sent, Read, Edited) */}
+			{infoMsg && (
+				<div
+					data-no-pane-swipe="true"
+					onClick={() => setInfoMsg(null)}
+					className="fixed inset-0 z-50 bg-transparent flex items-center justify-center p-4"
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="w-full max-w-xs rounded-2xl bg-[#241f1b] p-5 space-y-3.5 shadow-[0_18px_48px_rgba(0,0,0,0.78)]"
+					>
+						<div className="flex items-center justify-between">
+							<h3 className="text-[16px] font-bold text-[#edf3d2]">Message Info</h3>
+							<button
+								type="button"
+								onClick={() => setInfoMsg(null)}
+								className="text-[13px] font-semibold text-[#9e998c] hover:text-[#edf3d2] cursor-pointer"
+							>
+								Close
+							</button>
+						</div>
+						<div className="space-y-2.5 text-[14px]">
+							<div className="flex items-center justify-between">
+								<span className="text-[#9e998c]">Author</span>
+								<span className="font-semibold text-[#edf3d2]">{infoMsg.authorName}</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-[#9e998c]">Sent</span>
+								<span className="font-semibold text-[#edf3d2]">{infoMsg.createdAt}</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-[#9e998c]">Read</span>
+								<span className="font-semibold text-[#cedb9c]">
+									{infoMsg.isSelf ? 'Delivered' : infoMsg.createdAt}
+								</span>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-[#9e998c]">Edited</span>
+								<span className="font-semibold text-[#9e998c]">Not edited</span>
+							</div>
 						</div>
 					</div>
 				</div>

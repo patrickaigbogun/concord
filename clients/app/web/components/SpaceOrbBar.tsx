@@ -228,22 +228,7 @@ export function SpaceOrbBar({
 					}`}
 					aria-label="Space rotary dial. Swipe left or right to switch spaces."
 				>
-					{/* Subtle Circular Rotary Arc Guide + 12 o'clock Center Notch */}
-					<div
-						aria-hidden="true"
-						className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full border border-[#cedb9c]/15"
-						style={{
-							top: '36px',
-							width: `${DIAL_RADIUS * 2}px`,
-							height: `${DIAL_RADIUS * 2}px`,
-						}}
-					/>
-					<div
-						aria-hidden="true"
-						className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-1 w-1.5 h-1.5 rounded-full bg-[#cedb9c]"
-					/>
-
-					{/* Orbs positioned on circular arc R = 220px, 22° spacing, centered at 12 o'clock */}
+					{/* Orbs positioned on invisible circular arc R = 220px, 22° spacing, centered at 12 o'clock */}
 					{slots.map((slotIdx) => {
 						const space = visibleSpaces[mod(slotIdx, count)]
 						const delta = slotIdx - dialPos
@@ -274,7 +259,7 @@ export function SpaceOrbBar({
 								<div
 									className={`relative w-12 h-12 rounded-full flex items-center justify-center font-semibold text-[#edf3d2] transition-colors duration-200 ${
 										isCenter
-											? 'bg-[#031f14] text-[12px] ring-2 ring-[#cedb9c] ring-offset-2 ring-offset-[#1d1916] shadow-lg shadow-black/50'
+											? 'bg-[#091410] text-[12px] ring-2 ring-[#cedb9c] ring-offset-2 ring-offset-[#1d1916] shadow-lg shadow-black/50'
 											: `bg-gradient-to-br ${space.orbGradient} text-[11px]`
 									}`}
 								>
