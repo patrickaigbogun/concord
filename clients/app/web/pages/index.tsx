@@ -31,7 +31,12 @@ import { ConcordSocket, type SocketConnectionState } from '../../lib/socket'
 import { uploadFile } from '../../lib/storage'
 import { isUuid, safeMediaUrl } from '../../lib/url'
 import type { ChatMessage, FileAsset, Realm, RoomViewMode, Space } from '../../lib/types'
-import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
+import {
+	AttachmentTray,
+	uploadStagedAttachment,
+	type DeviceGalleryItem,
+	type StagedAttachment,
+} from '../components/AttachmentTray'
 import {
 	ForwardMessageSheet,
 	ImageLightbox,
@@ -248,23 +253,23 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 	if (side === 'left') {
 		return (
 			<svg
-				className="absolute -left-[10px] bottom-0 w-[16px] h-[18px] pointer-events-none"
-				viewBox="0 0 16 18"
+				className="absolute left-[2px] -bottom-[7px] w-[18px] h-[11px] pointer-events-none"
+				viewBox="0 0 18 11"
 				fill="none"
 				aria-hidden="true"
 			>
-				<path d="M16 0C16 9 10 15.5 0.5 17.5C5.2 13.4 7.5 8.5 7.5 0H16Z" fill={color} />
+				<path d="M18 0H0C1 4.8 0 8.2 0 10.5C6.5 9.8 13.5 6.2 18 0Z" fill={color} />
 			</svg>
 		)
 	}
 	return (
 		<svg
-			className="absolute -right-[10px] bottom-0 w-[16px] h-[18px] pointer-events-none"
-			viewBox="0 0 16 18"
+			className="absolute right-[2px] -bottom-[7px] w-[18px] h-[11px] pointer-events-none"
+			viewBox="0 0 18 11"
 			fill="none"
 			aria-hidden="true"
 		>
-			<path d="M0 0C0 9 6 15.5 15.5 17.5C10.8 13.4 8.5 8.5 8.5 0H0Z" fill={color} />
+			<path d="M0 0H18C17 4.8 18 8.2 18 10.5C11.5 9.8 4.5 6.2 0 0Z" fill={color} />
 		</svg>
 	)
 }
@@ -288,6 +293,8 @@ export default function ConcordAppPage() {
 
 	// Device gallery items persisted across tray opens in this session
 	const [deviceGallery, setDeviceGallery] = useState<DeviceGalleryItem[]>([])
+	const [stagedAttachments, setStagedAttachments] = useState<StagedAttachment[]>([])
+	const [isSendingStaged, setIsSendingStaged] = useState(false)
 
 	const [draft, setDraft] = useState('')
 	const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
@@ -692,6 +699,26 @@ export default function ConcordAppPage() {
 
 	const handleSendMessage = async (e?: React.FormEvent) => {
 		e?.preventDefault()
+		if (stagedAttachments.length > 0) {
+			if (isSendingStaged) return
+			setIsSendingStaged(true)
+			const items = [...stagedAttachments]
+			const singleCaption = items.length === 1 ? draft.trim() || undefined : undefined
+			setStagedAttachments([])
+			setDraft('')
+			setOpenTray('none')
+			try {
+				for (const item of items) {
+					const asset = await uploadStagedAttachment(item, activeSpace.id)
+					await handleSendAsset(asset, singleCaption)
+				}
+			} catch (err) {
+				showToast(err instanceof Error ? err.message : 'Upload failed')
+			} finally {
+				setIsSendingStaged(false)
+			}
+			return
+		}
 		await sendTextContent(draft)
 	}
 
@@ -702,13 +729,7 @@ export default function ConcordAppPage() {
 			[targetSpaceId]: [asset, ...(prev[targetSpaceId] || [])],
 		}))
 
-		const content =
-			caption ||
-			(asset.kind === 'image'
-				? ''
-				: asset.kind === 'audio'
-					? 'Voice note'
-					: `Shared ${asset.filename}`)
+		const content = caption || ''
 
 		const tempId = newTempId()
 		const newMsg: ChatMessage = {
@@ -1596,14 +1617,21 @@ export default function ConcordAppPage() {
 								<input
 									ref={composerInputRef}
 									type="text"
-									value={draft}
+									value={stagedAttachments.length > 1 ? '' : draft}
+									disabled={stagedAttachments.length > 1 || isSendingStaged}
 									onFocus={() => {
 										setOrbBarExpanded(false)
-										setOpenTray('none')
+										if (stagedAttachments.length === 0) setOpenTray('none')
 									}}
 									onChange={(e) => setDraft(e.target.value)}
-									placeholder={`Message ${activeSpace.name}…`}
-									className="flex-1 min-w-0 w-full bg-transparent py-2 text-[15px] text-[#edf3d2] placeholder:text-[#8f897c] focus:outline-none"
+									placeholder={
+										stagedAttachments.length > 1
+											? `${stagedAttachments.length} items selected`
+											: stagedAttachments.length === 1
+												? 'Add a caption…'
+												: `Message ${activeSpace.name}…`
+									}
+									className="flex-1 min-w-0 w-full bg-transparent py-2 text-[15px] text-[#edf3d2] placeholder:text-[#8f897c] focus:outline-none disabled:opacity-75"
 								/>
 								<button
 									type="button"
@@ -1631,7 +1659,7 @@ export default function ConcordAppPage() {
 							{/* 3. Right of Input: Fountain Pen Nib Send Button */}
 							<button
 								type="submit"
-								disabled={!draft.trim()}
+								disabled={(!draft.trim() && stagedAttachments.length === 0) || isSendingStaged}
 								aria-label="Send message"
 								title="Send message"
 								className="w-10 h-10 rounded-full bg-[#cedb9c] text-[#1d1916] hover:bg-[#dce7b0] disabled:bg-[#2a241f] disabled:text-[#6e695e] flex items-center justify-center transition cursor-pointer shrink-0"
@@ -1669,9 +1697,13 @@ export default function ConcordAppPage() {
 					<AttachmentTray
 						spaceId={activeSpace.id}
 						galleryItems={deviceGallery}
+						stagedAttachments={stagedAttachments}
+						onChangeStaged={setStagedAttachments}
 						onAddGalleryItems={(items) => setDeviceGallery((prev) => [...items, ...prev])}
-						onClose={() => setOpenTray('none')}
-						onSendAsset={handleSendAsset}
+						onClose={() => {
+							setStagedAttachments([])
+							setOpenTray('none')
+						}}
 					/>
 				)}
 

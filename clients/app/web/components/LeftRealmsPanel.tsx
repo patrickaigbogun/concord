@@ -45,9 +45,11 @@ export function LeftRealmsPanel({
 		<aside className="h-full flex flex-col bg-[#08100d] select-none pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			{/* Centered Brand Header: Concord Logo + "Realms" Wordmark */}
 			<div className="px-5 pt-6 pb-4 flex flex-col items-center text-center gap-2 shrink-0">
-				<svg className="w-12 h-12 text-[#cedb9c] overflow-visible" viewBox="-8 -8 116 116" fill="none" aria-label="Concord">
-					<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
-					<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
+				<svg className="w-12 h-12 text-[#cedb9c] overflow-visible" viewBox="0 0 100 100" fill="none" aria-label="Concord">
+					<g transform="translate(10 0)">
+						<path d="M 68 22 A 38 38 0 1 0 68 78" stroke="currentColor" strokeWidth="12" strokeLinecap="round" />
+						<circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="10" />
+					</g>
 				</svg>
 				<h1 className="text-[26px] font-bold tracking-tight text-[#edf3d2] font-heading leading-none">
 					Realms
