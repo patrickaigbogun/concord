@@ -60,10 +60,13 @@ export function VoiceNotePlayer({
 	isSelf?: boolean
 }) {
 	const audioRef = useRef<HTMLAudioElement | null>(null)
+	const waveformRef = useRef<HTMLDivElement | null>(null)
+	const scrubbingRef = useRef(false)
 	const [playing, setPlaying] = useState(false)
 	const [currentTime, setCurrentTime] = useState(0)
 	const [duration, setDuration] = useState(0)
-	const [rate, setRate] = useState<1 | 1.5 | 2>(1)
+	const [rate, setRate] = useState<0.5 | 1 | 1.5 | 2>(1)
+	const SPEED_STEPS: (0.5 | 1 | 1.5 | 2)[] = [0.5, 1, 1.5, 2]
 
 	const bars = useMemo(
 		() => generateWaveformBars(`${asset.id}-${asset.filename}`, 34),
@@ -112,21 +115,42 @@ export function VoiceNotePlayer({
 		}
 	}
 
-	const cycleRate = (e: React.MouseEvent) => {
+	const selectRate = (next: 0.5 | 1 | 1.5 | 2, e: React.MouseEvent) => {
 		e.stopPropagation()
-		const next: 1 | 1.5 | 2 = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1
 		setRate(next)
 		if (audioRef.current) audioRef.current.playbackRate = next
 	}
 
-	const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
-		e.stopPropagation()
+	const scrubToClientX = (clientX: number) => {
 		const el = audioRef.current
-		if (!el || !duration) return
-		const rect = e.currentTarget.getBoundingClientRect()
-		const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+		const box = waveformRef.current
+		if (!el || !box || !duration) return
+		const rect = box.getBoundingClientRect()
+		const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
 		el.currentTime = ratio * duration
 		setCurrentTime(el.currentTime)
+	}
+
+	const handleWaveformPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+		e.stopPropagation()
+		scrubbingRef.current = true
+		e.currentTarget.setPointerCapture(e.pointerId)
+		scrubToClientX(e.clientX)
+	}
+
+	const handleWaveformPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (!scrubbingRef.current) return
+		e.stopPropagation()
+		scrubToClientX(e.clientX)
+	}
+
+	const handleWaveformPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (!scrubbingRef.current) return
+		e.stopPropagation()
+		scrubbingRef.current = false
+		if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+			e.currentTarget.releasePointerCapture(e.pointerId)
+		}
 	}
 
 	const progress = duration > 0 ? currentTime / duration : 0
@@ -134,72 +158,87 @@ export function VoiceNotePlayer({
 	return (
 		<div
 			data-no-pane-swipe="true"
-			className={`min-w-[235px] sm:min-w-[270px] max-w-full flex items-center gap-3 py-1 ${
+			className={`min-w-[245px] sm:min-w-[280px] max-w-full flex flex-col gap-2 py-1 ${
 				isSelf ? 'text-[#f2fbd0]' : 'text-[#e5ebcd]'
 			}`}
 		>
 			<audio ref={audioRef} src={url} preload="metadata" className="hidden" />
 
-			<button
-				type="button"
-				onClick={togglePlay}
-				aria-label={playing ? 'Pause voice note' : 'Play voice note'}
-				className="w-10 h-10 rounded-full bg-[#cedb9c] text-[#050a08] hover:bg-[#dce7b0] flex items-center justify-center shrink-0 transition cursor-pointer shadow-md shadow-black/30"
-			>
-				{playing ? (
-					<svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-						<rect x="6" y="4" width="4" height="16" rx="1.2" />
-						<rect x="14" y="4" width="4" height="16" rx="1.2" />
-					</svg>
-				) : (
-					<svg className="w-4 h-4 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M7 5.14v13.72a1 1 0 0 0 1.52.85l11.02-6.86a1 1 0 0 0 0-1.7L8.52 4.29A1 1 0 0 0 7 5.14z" />
-					</svg>
-				)}
-			</button>
-
-			<div className="flex-1 min-w-0 flex flex-col gap-1.5">
-				<div
-					onClick={handleScrub}
-					role="slider"
-					aria-label="Audio waveform"
-					aria-valuemin={0}
-					aria-valuemax={Math.round(duration)}
-					aria-valuenow={Math.round(currentTime)}
-					tabIndex={0}
-					className="h-8 flex items-center gap-[2.5px] cursor-pointer select-none"
+			<div className="flex items-center gap-3">
+				<button
+					type="button"
+					onClick={togglePlay}
+					aria-label={playing ? 'Pause' : 'Play'}
+					className="w-10 h-10 rounded-full bg-[#cedb9c] text-[#050a08] hover:bg-[#dce7b0] flex items-center justify-center shrink-0 transition cursor-pointer shadow-md shadow-black/30"
 				>
-					{bars.map((amp, idx) => {
-						const barRatio = (idx + 0.5) / bars.length
-						const filled = barRatio <= progress
-						return (
-							<span
-								key={idx}
-								style={{ height: `${Math.round(amp * 100)}%` }}
-								className={`flex-1 rounded-full transition-colors duration-100 ${
-									filled ? 'bg-[#cedb9c]' : 'bg-[#cedb9c]/28'
-								}`}
-							/>
-						)
-					})}
-				</div>
+					{playing ? (
+						<svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+							<rect x="6" y="4" width="4" height="16" rx="1.2" />
+							<rect x="14" y="4" width="4" height="16" rx="1.2" />
+						</svg>
+					) : (
+						<svg className="w-4 h-4 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M7 5.14v13.72a1 1 0 0 0 1.52.85l11.02-6.86a1 1 0 0 0 0-1.7L8.52 4.29A1 1 0 0 0 7 5.14z" />
+						</svg>
+					)}
+				</button>
 
-				<div className="flex items-center justify-between text-[11px] text-[#b8b3a5] tabular-nums leading-none">
-					<span>
-						{playing || currentTime > 0
-							? `${formatDuration(currentTime)} / ${formatDuration(duration)}`
-							: duration > 0
-								? formatDuration(duration)
-								: 'Voice note'}
-					</span>
-					<button
-						type="button"
-						onClick={cycleRate}
-						className="px-1.5 py-0.5 rounded-md bg-black/25 hover:bg-black/40 text-[#cedb9c] font-semibold transition cursor-pointer"
+				<div className="flex-1 min-w-0 flex flex-col gap-1">
+					<div
+						ref={waveformRef}
+						onPointerDown={handleWaveformPointerDown}
+						onPointerMove={handleWaveformPointerMove}
+						onPointerUp={handleWaveformPointerUp}
+						onPointerCancel={handleWaveformPointerUp}
+						role="slider"
+						aria-label="Audio waveform"
+						aria-valuemin={0}
+						aria-valuemax={Math.round(duration)}
+						aria-valuenow={Math.round(currentTime)}
+						tabIndex={0}
+						className="h-9 flex items-center gap-[2.5px] cursor-pointer select-none touch-none"
 					>
-						{rate}x
-					</button>
+						{bars.map((amp, idx) => {
+							const barRatio = (idx + 0.5) / bars.length
+							const filled = barRatio <= progress
+							return (
+								<span
+									key={idx}
+									style={{ height: `${Math.round(amp * 100)}%` }}
+									className={`flex-1 rounded-full transition-colors duration-75 ${
+										filled ? 'bg-[#cedb9c]' : 'bg-[#cedb9c]/28'
+									}`}
+								/>
+							)
+						})}
+					</div>
+
+					<div className="flex items-center justify-between text-[11px] text-[#b8b3a5] tabular-nums leading-none">
+						<span>{formatDuration(currentTime)}</span>
+						<span>{formatDuration(duration)}</span>
+					</div>
 				</div>
+			</div>
+
+			{/* Stepped Playback Speed Dial Bar */}
+			<div className="grid grid-cols-4 gap-1 rounded-xl bg-black/25 p-1">
+				{SPEED_STEPS.map((step) => {
+					const active = rate === step
+					return (
+						<button
+							key={step}
+							type="button"
+							onClick={(e) => selectRate(step, e)}
+							className={`py-1 rounded-lg text-[11px] font-bold tabular-nums transition cursor-pointer ${
+								active
+									? 'bg-[#cedb9c] text-[#050a08]'
+									: 'text-[#b8b3a5] hover:text-[#edf3d2]'
+							}`}
+						>
+							{step}x
+						</button>
+					)
+				})}
 			</div>
 		</div>
 	)

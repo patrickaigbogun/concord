@@ -62,46 +62,50 @@ function formatBytes(bytes: number): string {
 }
 
 async function optimizeImageToWebP(file: File, rotationDeg: number, cropMode: CropMode): Promise<File> {
-	const bitmap = await createImageBitmap(file)
-	const maxDim = 1600
-	let sx = 0
-	let sy = 0
-	let sw = bitmap.width
-	let sh = bitmap.height
+	try {
+		const bitmap = await createImageBitmap(file)
+		const maxDim = 1600
+		let sx = 0
+		let sy = 0
+		let sw = bitmap.width
+		let sh = bitmap.height
 
-	if (cropMode === 'square') {
-		const side = Math.min(bitmap.width, bitmap.height)
-		sx = Math.floor((bitmap.width - side) / 2)
-		sy = Math.floor((bitmap.height - side) / 2)
-		sw = side
-		sh = side
-	}
+		if (cropMode === 'square') {
+			const side = Math.min(bitmap.width, bitmap.height)
+			sx = Math.floor((bitmap.width - side) / 2)
+			sy = Math.floor((bitmap.height - side) / 2)
+			sw = side
+			sh = side
+		}
 
-	const scale = Math.min(1, maxDim / Math.max(sw, sh))
-	const drawW = Math.max(1, Math.round(sw * scale))
-	const drawH = Math.max(1, Math.round(sh * scale))
-	const normalizedRot = ((rotationDeg % 360) + 360) % 360
-	const swap = normalizedRot === 90 || normalizedRot === 270
+		const scale = Math.min(1, maxDim / Math.max(sw, sh))
+		const drawW = Math.max(1, Math.round(sw * scale))
+		const drawH = Math.max(1, Math.round(sh * scale))
+		const normalizedRot = ((rotationDeg % 360) + 360) % 360
+		const swap = normalizedRot === 90 || normalizedRot === 270
 
-	const canvas = document.createElement('canvas')
-	canvas.width = swap ? drawH : drawW
-	canvas.height = swap ? drawW : drawH
+		const canvas = document.createElement('canvas')
+		canvas.width = swap ? drawH : drawW
+		canvas.height = swap ? drawW : drawH
 
-	const ctx = canvas.getContext('2d')
-	if (!ctx) {
+		const ctx = canvas.getContext('2d')
+		if (!ctx) {
+			bitmap.close()
+			return file
+		}
+
+		ctx.translate(canvas.width / 2, canvas.height / 2)
+		ctx.rotate((normalizedRot * Math.PI) / 180)
+		ctx.drawImage(bitmap, sx, sy, sw, sh, -drawW / 2, -drawH / 2, drawW, drawH)
 		bitmap.close()
+
+		const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.84))
+		if (!blob) return file
+		const base = file.name.replace(/\.[^.]+$/, '') || 'photo'
+		return new File([blob], `${base}.webp`, { type: 'image/webp' })
+	} catch {
 		return file
 	}
-
-	ctx.translate(canvas.width / 2, canvas.height / 2)
-	ctx.rotate((normalizedRot * Math.PI) / 180)
-	ctx.drawImage(bitmap, sx, sy, sw, sh, -drawW / 2, -drawH / 2, drawW, drawH)
-	bitmap.close()
-
-	const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.84))
-	if (!blob) return file
-	const base = file.name.replace(/\.[^.]+$/, '') || 'photo'
-	return new File([blob], `${base}.webp`, { type: 'image/webp' })
 }
 
 function probeVideoDuration(url: string): Promise<number> {

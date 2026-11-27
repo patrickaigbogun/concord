@@ -1,7 +1,7 @@
 import { hapticTap } from '../../lib/haptics'
 import type { ChatMessage, RoomViewMode, Space } from '../../lib/types'
 
-const QUICK_REACTIONS = ['✦', '❤️', '🔥', '😂', '👏', '😮']
+const QUICK_REACTIONS = ['⭐', '❤️', '🔥', '😂', '👏', '😮']
 
 export function MessageContextMenu({
 	msg,
@@ -62,10 +62,10 @@ export function MessageContextMenu({
 					<button
 						type="button"
 						onClick={() => onReply(msg)}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 					>
 						<span>Reply</span>
-						<svg className="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 							<polyline points="9 17 4 12 9 7" />
 							<path d="M20 18v-2a4 4 0 0 0-4-4H4" />
 						</svg>
@@ -75,10 +75,10 @@ export function MessageContextMenu({
 						<button
 							type="button"
 							onClick={() => onCopy(msg)}
-							className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+							className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 						>
 							<span>Copy text</span>
-							<svg className="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+							<svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 								<rect x="9" y="9" width="13" height="13" rx="2" />
 								<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
 							</svg>
@@ -91,10 +91,10 @@ export function MessageContextMenu({
 							hapticTap()
 							onSelect(msg.id)
 						}}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 					>
 						<span>Select message</span>
-						<svg className="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 							<circle cx="12" cy="12" r="9" />
 							<polyline points="9 12 11 14 15 10" />
 						</svg>
@@ -106,10 +106,10 @@ export function MessageContextMenu({
 							hapticTap()
 							onForward(msg)
 						}}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 					>
 						<span>Forward</span>
-						<svg className="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 							<polyline points="15 17 20 12 15 7" />
 							<path d="M4 18v-2a4 4 0 0 1 4-4h12" />
 						</svg>
@@ -118,11 +118,11 @@ export function MessageContextMenu({
 					<button
 						type="button"
 						onClick={() => onToggleKeep(msg.id)}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 					>
-						<span>{isKept ? 'Unkeep' : 'Keep'}</span>
-						<svg className="w-4 h-4 text-[var(--accent)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+						<span>{isKept ? 'Unstar' : 'Star'}</span>
+						<svg className="w-5 h-5 text-[var(--accent)]" viewBox="0 0 24 24" fill={isKept ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+							<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
 						</svg>
 					</button>
 
@@ -132,10 +132,10 @@ export function MessageContextMenu({
 							hapticTap()
 							onCheckInfo(msg)
 						}}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-[var(--text-bright)] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
 					>
 						<span>Check</span>
-						<svg className="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<svg className="w-5 h-5 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 							<circle cx="12" cy="12" r="9" />
 							<line x1="12" y1="16" x2="12" y2="12" />
 							<line x1="12" y1="8" x2="12.01" y2="8" />
@@ -145,10 +145,10 @@ export function MessageContextMenu({
 					<button
 						type="button"
 						onClick={() => onDelete(msg.id)}
-						className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
+						className="w-full px-4 py-2.5 text-left text-[15px] font-medium text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
 					>
 						<span>Delete</span>
-						<svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+						<svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
 							<polyline points="3 6 5 6 21 6" />
 							<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
 						</svg>

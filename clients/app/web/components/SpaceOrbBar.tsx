@@ -197,10 +197,9 @@ export function SpaceOrbBar({
 					hapticTap()
 					onToggleExpanded()
 				}}
-				className="pointer-events-auto group flex items-center gap-2 px-3 py-1 rounded-full bg-[#050a08]/55 backdrop-blur-md hover:bg-[#2a241f]/75 text-[13px] text-[#e5ebcd] transition cursor-pointer"
+				className="pointer-events-auto group flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#050a08]/55 backdrop-blur-md hover:bg-[#2a241f]/75 text-[13px] text-[#e5ebcd] transition cursor-pointer"
 			>
-				<span className="w-2 h-2 rounded-full bg-[#cedb9c]" />
-				<span className="font-semibold text-[#edf3d2]">{centeredSpace?.name}</span>
+				<span className="font-semibold text-[#edf3d2]">Spaces</span>
 				<svg
 					className={`w-3.5 h-3.5 text-[#9e998c] transition-transform duration-200 ${
 						expanded ? 'rotate-180' : ''

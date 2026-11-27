@@ -80,7 +80,7 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
 			authorAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&q=80',
 			content: 'There is something deeply calming about a chat space where the UI gets out of the way and lets sentences breathe.',
 			createdAt: '15:12',
-			reactions: [{ emoji: '✦', count: 3, reacted: true }],
+			reactions: [{ emoji: '⭐', count: 3, reacted: true }],
 		},
 		{
 			id: 'm2',
