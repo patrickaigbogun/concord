@@ -248,23 +248,23 @@ function SpeechBubbleTail({ side, color }: { side: 'left' | 'right'; color: stri
 	if (side === 'left') {
 		return (
 			<svg
-				className="absolute -left-[10px] bottom-[3px] w-[14px] h-[16px] pointer-events-none"
-				viewBox="0 0 14 16"
+				className="absolute -left-[10px] bottom-0 w-[16px] h-[18px] pointer-events-none"
+				viewBox="0 0 16 18"
 				fill="none"
 				aria-hidden="true"
 			>
-				<path d="M14 0C14 7.5 8 13.5 0.5 15C4.5 11.2 6.5 7 6.5 0H14Z" fill={color} />
+				<path d="M16 0C16 9 10 15.5 0.5 17.5C5.2 13.4 7.5 8.5 7.5 0H16Z" fill={color} />
 			</svg>
 		)
 	}
 	return (
 		<svg
-			className="absolute -right-[10px] bottom-[3px] w-[14px] h-[16px] pointer-events-none"
-			viewBox="0 0 14 16"
+			className="absolute -right-[10px] bottom-0 w-[16px] h-[18px] pointer-events-none"
+			viewBox="0 0 16 18"
 			fill="none"
 			aria-hidden="true"
 		>
-			<path d="M0 0C0 7.5 6 13.5 13.5 15C9.5 11.2 7.5 7 7.5 0H0Z" fill={color} />
+			<path d="M0 0C0 9 6 15.5 15.5 17.5C10.8 13.4 8.5 8.5 8.5 0H0Z" fill={color} />
 		</svg>
 	)
 }
@@ -324,6 +324,18 @@ export default function ConcordAppPage() {
 	const [contextMenu, setContextMenu] = useState<{ msg: ChatMessage; x: number; y: number } | null>(null)
 	const [infoMsg, setInfoMsg] = useState<ChatMessage | null>(null)
 	const [lightboxImage, setLightboxImage] = useState<{ url: string; filename: string } | null>(null)
+	const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null)
+
+	const scrollToMessage = (targetId: string) => {
+		const el = document.getElementById(`msg-${targetId}`)
+		if (!el) return
+		hapticTap()
+		el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		setHighlightedMsgId(targetId)
+		window.setTimeout(() => {
+			setHighlightedMsgId((cur) => (cur === targetId ? null : cur))
+		}, 1400)
+	}
 	const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null)
 	const [selectionMode, setSelectionMode] = useState(false)
 	const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(() => new Set())
@@ -1233,6 +1245,7 @@ export default function ConcordAppPage() {
 								return (
 									<div
 										key={msg.id}
+										id={`msg-${msg.id}`}
 										onDoubleClick={() => !selectionMode && triggerReply(msg)}
 										onContextMenu={(e) => {
 											e.preventDefault()
@@ -1249,10 +1262,10 @@ export default function ConcordAppPage() {
 												longPressTimerRef.current = null
 											}
 										}}
-										className={`group relative flex flex-col rounded-2xl transition-colors ${
-											isSelected ? 'bg-[#cedb9c]/12 px-1.5 py-1' : ''
+										className={`group relative flex flex-col rounded-2xl transition-colors duration-300 ${
+											isSelected || highlightedMsgId === msg.id ? 'bg-[#cedb9c]/14 px-1.5 py-1' : ''
 										} ${msg.isSelf ? 'items-end' : 'items-start'} ${
-											idx === 0 ? '' : sameAuthorAsPrev ? 'mt-1.5' : 'mt-4'
+											idx === 0 ? '' : sameAuthorAsPrev ? 'mt-2' : 'mt-4'
 										}`}
 									>
 										<div
@@ -1308,27 +1321,23 @@ export default function ConcordAppPage() {
 													if (hasFullBleedMedia && att && mediaUrl) {
 														return (
 															<div
-																className={`relative max-w-[82%] md:max-w-[66%] rounded-[22px] ${
+																className={`relative max-w-[82%] md:max-w-[66%] rounded-[14px] ${
 																	msg.isSelf
-																		? 'bg-[#0d1c16] text-[#f2fbd0]'
-																		: 'bg-[#2d2722] text-[#e5ebcd]'
-																} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
+																		? 'bg-[#0d1c16] text-[#f2fbd0] rounded-br-[3px]'
+																		: 'bg-[#2d2722] text-[#e5ebcd] rounded-bl-[3px]'
+																}`}
 															>
-																{isLastInGroup && (
-																	<SpeechBubbleTail
-																		side={msg.isSelf ? 'right' : 'left'}
-																		color={msg.isSelf ? '#0d1c16' : '#2d2722'}
-																	/>
-																)}
+																<SpeechBubbleTail
+																	side={msg.isSelf ? 'right' : 'left'}
+																	color={msg.isSelf ? '#0d1c16' : '#2d2722'}
+																/>
 																<div
 																	className={`overflow-hidden ${
 																		msg.content
-																			? 'rounded-t-[22px]'
-																			: isLastInGroup
-																				? msg.isSelf
-																					? 'rounded-[22px] rounded-br-[6px]'
-																					: 'rounded-[22px] rounded-bl-[6px]'
-																				: 'rounded-[22px]'
+																			? 'rounded-t-[14px]'
+																			: msg.isSelf
+																				? 'rounded-[14px] rounded-br-[3px]'
+																				: 'rounded-[14px] rounded-bl-[3px]'
 																	}`}
 																>
 																	{att.kind === 'image' ? (
@@ -1352,7 +1361,7 @@ export default function ConcordAppPage() {
 																	)}
 																</div>
 																{msg.content && (
-																	<div className="px-3.5 py-2.5 text-[15px] leading-[1.45]">
+																	<div className="px-3.5 py-2.5 text-[15px] font-medium tracking-[-0.01em] leading-[1.45]">
 																		<p className="whitespace-pre-wrap break-words">{msg.content}</p>
 																		{firstUrl && <LinkPreviewCard url={firstUrl} />}
 																	</div>
@@ -1373,24 +1382,33 @@ export default function ConcordAppPage() {
 
 													return (
 														<div
-															className={`relative max-w-[88%] md:max-w-[78%] rounded-[22px] px-3.5 py-2.5 text-[16px] leading-[1.46] ${
+															className={`relative max-w-[88%] md:max-w-[78%] rounded-[14px] px-3.5 py-2.5 text-[16px] font-medium tracking-[-0.01em] leading-[1.46] ${
 																msg.isSelf
-																	? 'bg-[#0d1c16] text-[#f2fbd0]'
-																	: 'bg-[#2d2722] text-[#e5ebcd]'
-															} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
+																	? 'bg-[#0d1c16] text-[#f2fbd0] rounded-br-[3px]'
+																	: 'bg-[#2d2722] text-[#e5ebcd] rounded-bl-[3px]'
+															}`}
 														>
-															{isLastInGroup && (
-																<SpeechBubbleTail
-																	side={msg.isSelf ? 'right' : 'left'}
-																	color={msg.isSelf ? '#0d1c16' : '#2d2722'}
-																/>
-															)}
+															<SpeechBubbleTail
+																side={msg.isSelf ? 'right' : 'left'}
+																color={msg.isSelf ? '#0d1c16' : '#2d2722'}
+															/>
 
 															{msg.replyTo && (
-																<div className="mb-2 pl-2.5 border-l-2 border-[#cedb9c]/65 text-[13px] text-[#cedb9c]/85">
-																	<span className="font-semibold text-[#edf3d2]">{msg.replyTo.authorName}: </span>
-																	<span className="italic">{msg.replyTo.excerpt}</span>
-																</div>
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.stopPropagation()
+																		if (msg.replyTo?.id) scrollToMessage(msg.replyTo.id)
+																	}}
+																	className="mb-2 w-full text-left rounded-[10px] bg-black/25 hover:bg-black/35 px-3 py-2 border-l-[3px] border-[#cedb9c] flex flex-col gap-0.5 transition cursor-pointer"
+																>
+																	<span className="text-[12px] font-bold text-[#cedb9c] leading-tight">
+																		{msg.replyTo.authorName}
+																	</span>
+																	<span className="text-[13px] font-normal text-[#e5ebcd]/80 line-clamp-2 leading-snug">
+																		{msg.replyTo.excerpt}
+																	</span>
+																</button>
 															)}
 
 															{att && att.kind === 'image' && mediaUrl && (
