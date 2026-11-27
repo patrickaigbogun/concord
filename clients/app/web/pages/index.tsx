@@ -57,7 +57,6 @@ import { StickerGifTray } from '../components/StickerGifTray'
 export const metadata = { title: 'Concord' }
 
 const VIEW_MODE_KEY = 'concord_realms_view_mode_v2'
-const QUICK_REACTIONS = ['✦', '🔥', '❤️', '👏', '😂']
 const VOICE_LEVEL_BAR_COUNT = 18
 
 const ORB_GRADIENTS = [
@@ -1302,18 +1301,69 @@ export default function ConcordAppPage() {
 														Boolean(att && !msg.content && !msg.replyTo && (att.kind === 'image' || att.kind === 'video' || att.kind === 'doc'))
 													const firstUrl = msg.content ? extractFirstUrl(msg.content) : null
 
+													const hasFullBleedMedia = Boolean(
+														att && mediaUrl && (att.kind === 'image' || att.kind === 'video') && !msg.replyTo
+													)
+
+													if (hasFullBleedMedia && att && mediaUrl) {
+														return (
+															<div
+																className={`relative max-w-[82%] md:max-w-[66%] rounded-[22px] ${
+																	msg.isSelf
+																		? 'bg-[#0d1c16] text-[#f2fbd0]'
+																		: 'bg-[#2d2722] text-[#e5ebcd]'
+																} ${isLastInGroup ? (msg.isSelf ? 'rounded-br-[6px]' : 'rounded-bl-[6px]') : ''}`}
+															>
+																{isLastInGroup && (
+																	<SpeechBubbleTail
+																		side={msg.isSelf ? 'right' : 'left'}
+																		color={msg.isSelf ? '#0d1c16' : '#2d2722'}
+																	/>
+																)}
+																<div
+																	className={`overflow-hidden ${
+																		msg.content
+																			? 'rounded-t-[22px]'
+																			: isLastInGroup
+																				? msg.isSelf
+																					? 'rounded-[22px] rounded-br-[6px]'
+																					: 'rounded-[22px] rounded-bl-[6px]'
+																				: 'rounded-[22px]'
+																	}`}
+																>
+																	{att.kind === 'image' ? (
+																		<button
+																			type="button"
+																			onClick={(e) => {
+																				e.stopPropagation()
+																				setLightboxImage({ url: mediaUrl, filename: att.filename })
+																			}}
+																			className="block w-full bg-black/25 cursor-pointer group"
+																		>
+																			<img
+																				src={mediaUrl}
+																				alt={att.filename}
+																				loading="lazy"
+																				className="w-full max-h-[360px] object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+																			/>
+																		</button>
+																	) : (
+																		<VideoMessageCard url={mediaUrl} filename={att.filename} />
+																	)}
+																</div>
+																{msg.content && (
+																	<div className="px-3.5 py-2.5 text-[15px] leading-[1.45]">
+																		<p className="whitespace-pre-wrap break-words">{msg.content}</p>
+																		{firstUrl && <LinkPreviewCard url={firstUrl} />}
+																	</div>
+																)}
+															</div>
+														)
+													}
+
 													if (isStandaloneMedia && att) {
 														return (
 															<div className="max-w-[85%] md:max-w-[72%]">
-																{att.kind === 'image' && mediaUrl && (
-																	<ImageGroupCard
-																		images={[{ id: att.id, url: mediaUrl, filename: att.filename }]}
-																		onOpenLightbox={(url, filename) => setLightboxImage({ url, filename })}
-																	/>
-																)}
-																{att.kind === 'video' && mediaUrl && (
-																	<VideoMessageCard url={mediaUrl} filename={att.filename} />
-																)}
 																{att.kind === 'doc' && (
 																	<DocumentMessageCard asset={att} url={mediaUrl} />
 																)}
@@ -1375,7 +1425,7 @@ export default function ConcordAppPage() {
 												})()}
 										</div>
 
-										{/* Sender Name, Timestamp & Kept Indicator Underneath Bubble */}
+										{/* Sender Name, Timestamp & Starred Indicator Underneath Bubble */}
 										{(isLastInGroup || isKept) && (
 											<div
 												className={`flex items-center gap-2 mt-1 ${
@@ -1389,30 +1439,13 @@ export default function ConcordAppPage() {
 													<span className="text-[11px] text-[#8a8478]">{msg.createdAt}</span>
 												)}
 												{isKept && (
-													<span className="text-[11px] font-semibold text-[#cedb9c]">Kept</span>
+													<span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#cedb9c]">
+														<svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+															<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+														</svg>
+														Starred
+													</span>
 												)}
-											</div>
-										)}
-
-										{msg.reactions && msg.reactions.length > 0 && (
-											<div className={`flex gap-1.5 mt-1 ${msg.isSelf ? 'pr-2.5' : 'pl-9'}`}>
-												{msg.reactions.map((r) => (
-													<button
-														key={r.emoji}
-														type="button"
-														onClick={(e) => {
-															e.stopPropagation()
-															void handleToggleReaction(msg.id, r.emoji)
-														}}
-														className={`text-[13px] px-2.5 py-0.5 rounded-full transition cursor-pointer ${
-															r.reacted
-																? 'bg-[#0d1c16] text-[#f2fbd0]'
-																: 'bg-[#2a241f] text-[#e5ebcd] hover:bg-[#352e27]'
-														}`}
-													>
-														{r.emoji} {r.count}
-													</button>
-												))}
 											</div>
 										)}
 									</div>
@@ -1658,7 +1691,6 @@ export default function ConcordAppPage() {
 					y={contextMenu.y}
 					isKept={keptMsgIds.has(contextMenu.msg.id)}
 					onClose={() => setContextMenu(null)}
-					onToggleReaction={(msgId, emoji) => void handleToggleReaction(msgId, emoji)}
 					onReply={triggerReply}
 					onCopy={(msg) => void handleCopyMessage(msg)}
 					onSelect={(msgId) => {

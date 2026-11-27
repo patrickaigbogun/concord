@@ -1,15 +1,12 @@
 import { hapticTap } from '../../lib/haptics'
 import type { ChatMessage, RoomViewMode, Space } from '../../lib/types'
 
-const QUICK_REACTIONS = ['⭐', '❤️', '🔥', '😂', '👏', '😮']
-
 export function MessageContextMenu({
 	msg,
 	x,
 	y,
 	isKept,
 	onClose,
-	onToggleReaction,
 	onReply,
 	onCopy,
 	onSelect,
@@ -23,7 +20,6 @@ export function MessageContextMenu({
 	y: number
 	isKept: boolean
 	onClose: () => void
-	onToggleReaction: (msgId: string, emoji: string) => void
 	onReply: (msg: ChatMessage) => void
 	onCopy: (msg: ChatMessage) => void
 	onSelect: (msgId: string) => void
@@ -41,22 +37,8 @@ export function MessageContextMenu({
 			<div
 				onClick={(e) => e.stopPropagation()}
 				style={{ left: `${x}px`, top: `${y}px` }}
-				className="fixed w-[228px] space-y-2"
+				className="fixed w-[228px]"
 			>
-				{/* Quick Reactions Bar */}
-				<div className="flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[var(--surface)] shadow-[0_14px_40px_rgba(0,0,0,0.72)]">
-					{QUICK_REACTIONS.map((emoji) => (
-						<button
-							key={emoji}
-							type="button"
-							onClick={() => onToggleReaction(msg.id, emoji)}
-							className="w-8 h-8 rounded-full hover:bg-white/10 active:scale-110 text-lg flex items-center justify-center transition cursor-pointer"
-						>
-							{emoji}
-						</button>
-					))}
-				</div>
-
 				{/* Elevated Context Menu Popover */}
 				<div className="rounded-2xl bg-[var(--surface)] py-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.78)]">
 					<button
