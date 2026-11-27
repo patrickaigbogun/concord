@@ -1,14 +1,27 @@
 @import "tailwindcss";
 
 :root {
+	/* Obsidian Green Chrome Palette */
 	--bg: #050a08;
+	--bg-canvas: #050a08;
+	--bg-chrome: #08100d;
+	--bg-self: #0d1c16;
+	--bg-self-hover: #12261e;
+	--bg-active: #0f1f19;
+	--bg-active-hover: #152a22;
+
+	/* Espresso Reader, Composer & Card Palette */
 	--surface: #241f1b;
 	--surface-elevated: #2c2621;
+	--bg-espresso: #1d1916;
+	--bg-espresso-card: #2a241f;
+	--bg-espresso-bubble: #2d2722;
+
+	/* Text & Accent */
 	--text: #e5ebcd;
+	--text-bright: #edf3d2;
 	--text-muted: #9e998c;
 	--text-dim: #7a7569;
-	--border: rgba(229, 235, 205, 0.08);
-	--border-strong: rgba(229, 235, 205, 0.14);
 	--accent: #cedb9c;
 	--accent-soft: rgba(206, 219, 156, 0.16);
 }

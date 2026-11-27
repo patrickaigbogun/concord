@@ -32,6 +32,13 @@ import { uploadFile } from '../../lib/storage'
 import { isUuid, safeMediaUrl } from '../../lib/url'
 import type { ChatMessage, FileAsset, Realm, RoomViewMode, Space } from '../../lib/types'
 import { AttachmentTray, type DeviceGalleryItem } from '../components/AttachmentTray'
+import {
+	ForwardMessageSheet,
+	ImageLightbox,
+	MessageContextMenu,
+	MessageInfoPopover,
+	SettingsSheet,
+} from '../components/ChatOverlays'
 import { CreateRealmModal, CreateSpaceModal } from '../components/CreateModals'
 import {
 	DocumentMessageCard,
@@ -1644,224 +1651,46 @@ export default function ConcordAppPage() {
 				/>
 			</div>
 
-			{/* FLOATING ELEVATED CONTEXT MENU (No backdrop blur/dim, anchored popover with deep shadow) */}
 			{contextMenu && (
-				<div
-					data-no-pane-swipe="true"
-					onClick={() => setContextMenu(null)}
-					className="fixed inset-0 z-50 bg-transparent"
-				>
-					<div
-						onClick={(e) => e.stopPropagation()}
-						style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
-						className="fixed w-[228px] space-y-2"
-					>
-						{/* Quick Reactions Bar */}
-						<div className="flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[#241f1b] shadow-[0_14px_40px_rgba(0,0,0,0.72)]">
-							{QUICK_REACTIONS.map((emoji) => (
-								<button
-									key={emoji}
-									type="button"
-									onClick={() => void handleToggleReaction(contextMenu.msg.id, emoji)}
-									className="w-8 h-8 rounded-full hover:bg-white/10 active:scale-110 text-lg flex items-center justify-center transition cursor-pointer"
-								>
-									{emoji}
-								</button>
-							))}
-						</div>
-
-						{/* Elevated Context Menu Popover */}
-						<div className="rounded-2xl bg-[#241f1b] py-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.78)]">
-							<button
-								type="button"
-								onClick={() => triggerReply(contextMenu.msg)}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-							>
-								<span>Reply</span>
-								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<polyline points="9 17 4 12 9 7" />
-									<path d="M20 18v-2a4 4 0 0 0-4-4H4" />
-								</svg>
-							</button>
-
-							{contextMenu.msg.content && (
-								<button
-									type="button"
-									onClick={() => void handleCopyMessage(contextMenu.msg)}
-									className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-								>
-									<span>Copy text</span>
-									<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-										<rect x="9" y="9" width="13" height="13" rx="2" />
-										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-									</svg>
-								</button>
-							)}
-
-							<button
-								type="button"
-								onClick={() => {
-									hapticTap()
-									setSelectionMode(true)
-									setSelectedMsgIds(new Set([contextMenu.msg.id]))
-									setContextMenu(null)
-								}}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-							>
-								<span>Select message</span>
-								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<circle cx="12" cy="12" r="9" />
-									<polyline points="9 12 11 14 15 10" />
-								</svg>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => {
-									hapticTap()
-									setForwardMsg(contextMenu.msg)
-									setContextMenu(null)
-								}}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-							>
-								<span>Forward</span>
-								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<polyline points="15 17 20 12 15 7" />
-									<path d="M4 18v-2a4 4 0 0 1 4-4h12" />
-								</svg>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => toggleKeptMsg(contextMenu.msg.id)}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-							>
-								<span>{keptMsgIds.has(contextMenu.msg.id) ? 'Unkeep' : 'Keep'}</span>
-								<svg className="w-4 h-4 text-[#cedb9c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-								</svg>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => {
-									hapticTap()
-									setInfoMsg(contextMenu.msg)
-									setContextMenu(null)
-								}}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#edf3d2] hover:bg-[#312b25] flex items-center justify-between cursor-pointer"
-							>
-								<span>Check</span>
-								<svg className="w-4 h-4 text-[#9e998c]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<circle cx="12" cy="12" r="9" />
-									<line x1="12" y1="16" x2="12" y2="12" />
-									<line x1="12" y1="8" x2="12.01" y2="8" />
-								</svg>
-							</button>
-
-							<button
-								type="button"
-								onClick={() => handleDeleteMessages([contextMenu.msg.id])}
-								className="w-full px-4 py-2.5 text-left text-[14px] font-medium text-red-400 hover:bg-red-500/10 flex items-center justify-between cursor-pointer"
-							>
-								<span>Delete</span>
-								<svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<polyline points="3 6 5 6 21 6" />
-									<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-								</svg>
-							</button>
-						</div>
-					</div>
-				</div>
+				<MessageContextMenu
+					msg={contextMenu.msg}
+					x={contextMenu.x}
+					y={contextMenu.y}
+					isKept={keptMsgIds.has(contextMenu.msg.id)}
+					onClose={() => setContextMenu(null)}
+					onToggleReaction={(msgId, emoji) => void handleToggleReaction(msgId, emoji)}
+					onReply={triggerReply}
+					onCopy={(msg) => void handleCopyMessage(msg)}
+					onSelect={(msgId) => {
+						setSelectionMode(true)
+						setSelectedMsgIds(new Set([msgId]))
+						setContextMenu(null)
+					}}
+					onForward={(msg) => {
+						setForwardMsg(msg)
+						setContextMenu(null)
+					}}
+					onToggleKeep={toggleKeptMsg}
+					onCheckInfo={(msg) => {
+						setInfoMsg(msg)
+						setContextMenu(null)
+					}}
+					onDelete={(msgId) => handleDeleteMessages([msgId])}
+				/>
 			)}
 
-			{/* MESSAGE INFO POPOVER (Opened by "Check" in context menu: Sent, Read, Edited) */}
-			{infoMsg && (
-				<div
-					data-no-pane-swipe="true"
-					onClick={() => setInfoMsg(null)}
-					className="fixed inset-0 z-50 bg-transparent flex items-center justify-center p-4"
-				>
-					<div
-						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-xs rounded-2xl bg-[#241f1b] p-5 space-y-3.5 shadow-[0_18px_48px_rgba(0,0,0,0.78)]"
-					>
-						<div className="flex items-center justify-between">
-							<h3 className="text-[16px] font-bold text-[#edf3d2]">Message Info</h3>
-							<button
-								type="button"
-								onClick={() => setInfoMsg(null)}
-								className="text-[13px] font-semibold text-[#9e998c] hover:text-[#edf3d2] cursor-pointer"
-							>
-								Close
-							</button>
-						</div>
-						<div className="space-y-2.5 text-[14px]">
-							<div className="flex items-center justify-between">
-								<span className="text-[#9e998c]">Author</span>
-								<span className="font-semibold text-[#edf3d2]">{infoMsg.authorName}</span>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-[#9e998c]">Sent</span>
-								<span className="font-semibold text-[#edf3d2]">{infoMsg.createdAt}</span>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-[#9e998c]">Read</span>
-								<span className="font-semibold text-[#cedb9c]">
-									{infoMsg.isSelf ? 'Delivered' : infoMsg.createdAt}
-								</span>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-[#9e998c]">Edited</span>
-								<span className="font-semibold text-[#9e998c]">Not edited</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
+			{infoMsg && <MessageInfoPopover msg={infoMsg} onClose={() => setInfoMsg(null)} />}
 
-			{/* FORWARD TO SPACE SHEET */}
 			{forwardMsg && (
-				<div
-					data-no-pane-swipe="true"
-					onClick={() => setForwardMsg(null)}
-					className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-				>
-					<div
-						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-sm rounded-3xl bg-[#15151d] p-5 space-y-4"
-					>
-						<div className="flex items-center justify-between">
-							<h3 className="text-[17px] font-bold text-white">Forward to Space</h3>
-							<button
-								type="button"
-								onClick={() => setForwardMsg(null)}
-								className="text-[14px] text-zinc-400 hover:text-white cursor-pointer"
-							>
-								Close
-							</button>
-						</div>
-						<div className="space-y-1.5 max-h-64 overflow-y-auto no-scrollbar">
-							{activeRealm.spaces.map((sp) => (
-								<button
-									key={sp.id}
-									type="button"
-									onClick={() => {
-										void sendTextContent(forwardMsg.content || forwardMsg.attachment?.filename || '', sp.id)
-										setForwardMsg(null)
-										showToast(`Forwarded to ${sp.name}`)
-									}}
-									className="w-full flex items-center gap-3 p-3 rounded-2xl bg-[#1c1c26] hover:bg-[#252533] text-left cursor-pointer"
-								>
-									<span className={`w-9 h-9 rounded-full bg-gradient-to-br ${sp.orbGradient} flex items-center justify-center text-[13px] font-bold text-white shrink-0`}>
-										{sp.name[0]}
-									</span>
-									<span className="text-[15px] font-semibold text-white truncate">{sp.name}</span>
-								</button>
-							))}
-						</div>
-					</div>
-				</div>
+				<ForwardMessageSheet
+					spaces={activeRealm.spaces}
+					onForwardToSpace={(sp) => {
+						void sendTextContent(forwardMsg.content || forwardMsg.attachment?.filename || '', sp.id)
+						setForwardMsg(null)
+						showToast(`Forwarded to ${sp.name}`)
+					}}
+					onClose={() => setForwardMsg(null)}
+				/>
 			)}
 
 			{/* SPACE DETAILS + PERSONA DRAWER (Opened by tapping top centered Space Orb + Pill) */}
@@ -1992,81 +1821,14 @@ export default function ConcordAppPage() {
 				/>
 			)}
 
-			{/* SETTINGS SHEET */}
-			{settingsOpen && (
-				<div
-					data-no-pane-swipe="true"
-					onClick={() => setSettingsOpen(false)}
-					className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-				>
-					<div
-						onClick={(e) => e.stopPropagation()}
-						className="w-full max-w-sm rounded-3xl bg-[#14141c] p-5 space-y-4 shadow-2xl"
-					>
-						<div className="flex items-center justify-between">
-							<h3 className="text-[19px] font-bold text-white font-heading">Settings</h3>
-							<button
-								type="button"
-								onClick={() => setSettingsOpen(false)}
-								className="w-9 h-9 rounded-full bg-[#1d1d28] text-zinc-300 hover:text-white flex items-center justify-center cursor-pointer"
-							>
-								<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-									<path d="M18 6L6 18" />
-									<path d="M6 6l12 12" />
-								</svg>
-							</button>
-						</div>
-
-						<div className="space-y-2">
-							<a
-								href="https://id.dexx.systems/profile"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] hover:bg-[#232332] text-[15px] font-semibold text-white transition"
-							>
-								<span>Concord ID Profile</span>
-								<span className="text-[13px] text-zinc-400">Open</span>
-							</a>
-
-							<div className="flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] text-[15px] text-zinc-200">
-								<span className="font-semibold">Default Realms View</span>
-								<span className="text-[13px] text-[#c4b5fd] font-semibold">
-									{viewMode === 'grid-visual' ? 'Orbs' : viewMode === 'grid-titled' ? 'Cards' : 'List'}
-								</span>
-							</div>
-
-							<div className="flex items-center justify-between px-4 py-3.5 rounded-2xl bg-[#1b1b26] text-[15px] text-zinc-200">
-								<span className="font-semibold">Version</span>
-								<span className="text-[13px] text-zinc-400">Concord 0.1.0</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
+			{settingsOpen && <SettingsSheet viewMode={viewMode} onClose={() => setSettingsOpen(false)} />}
 
 			{lightboxImage && (
-				<div
-					onClick={() => setLightboxImage(null)}
-					className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
-				>
-					<button
-						type="button"
-						onClick={() => setLightboxImage(null)}
-						aria-label="Close image"
-						className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition"
-					>
-						<svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-							<line x1="18" y1="6" x2="6" y2="18" />
-							<line x1="6" y1="6" x2="18" y2="18" />
-						</svg>
-					</button>
-					<img
-						src={lightboxImage.url}
-						alt={lightboxImage.filename}
-						onClick={(e) => e.stopPropagation()}
-						className="max-w-full max-h-[88dvh] rounded-2xl object-contain shadow-2xl"
-					/>
-				</div>
+				<ImageLightbox
+					url={lightboxImage.url}
+					filename={lightboxImage.filename}
+					onClose={() => setLightboxImage(null)}
+				/>
 			)}
 		</div>
 	)
